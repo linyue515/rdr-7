@@ -92,7 +92,7 @@
                                 <td class="sorttable_alpha" style="width:80px !important;" align="left"> Encoding </td>
                                 <td style="width:100px !important;"> 占用内存 </td>
                                 <td> 元素数量 </td>
-                                <td class="sorttable_alpha" style="width:130px !important;"> 过期时间 </td>
+                                <td class="sorttable_alpha" style="width:132px !important;"> 过期时间 </td>
                                 <td class="sorttable_numeric" style="width:32px !important;"> Db </td>
                             </tr>
                         </thead>
@@ -104,7 +104,7 @@
                                 <td>{{$entry.Encoding}}</td>
                                 <td align="right" sorttable_customkey="{{$entry.Bytes}}">{{humanizeBytes $entry.Bytes}}</td>
                                 <td align="right" sorttable_customkey="{{$entry.NumOfElem}}">{{humanizeComma $entry.NumOfElem}}</td>
-                                <td style="font-size:11.5px !important;" align="center">{{$entry.Expiration}}</td>
+                                <td style="font-size:11.5px !important;" align="center">{{timestampFormat $entry.Expiration}}</td>
                                 <td>{{$entry.Db}}</td>
                             </tr>
                             {{end}}

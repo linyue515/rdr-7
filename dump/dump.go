@@ -81,7 +81,7 @@ func ToCliWriterToFile(cli *cli.Context) {
 	}
 	cst := time.FixedZone("CST", 8*60*60)
 	currentTime := time.Now().In(cst)
-	resultFileName := fmt.Sprintf("/tmp/rdb_report-%s.json", currentTime.Format("20060102-150405"))
+	resultFileName := fmt.Sprintf("/tmp/rdb-report-%s.json", currentTime.Format("20060102-150405"))
 
 	// 创建或打开文件，追加模式; os.O_APPEND|os.O_CREATE|os.O_WRONLY表示以追加模式打开文件，如果文件不存在则创建，并且只允许写入0644
 	file, err := os.OpenFile(resultFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -104,12 +104,12 @@ func ToCliWriterToFile(cli *cli.Context) {
 	// parse rdb file
 	nArgs := cli.NArg()
 	for i := 0; i < nArgs; i++ {
-		file := cli.Args().Get(i)
+		rdb_file := cli.Args().Get(i)
 		rdbDecoder := decoder.NewDecoder()
-		go Decode(cli, rdbDecoder, file)
+		go Decode(cli, rdbDecoder, rdb_file)
 		cnt := NewCounter()
 		cnt.Count(rdbDecoder.Entries)
-		filename := filepath.Base(file)
+		filename := filepath.Base(rdb_file)
 		data := GetData(filename, cnt)
 		data["MemoryUse"] = rdbDecoder.GetUsedMem()
 		data["CTime"] = rdbDecoder.GetTimestamp()
@@ -123,21 +123,21 @@ func ToCliWriterToFile(cli *cli.Context) {
 	}
 	writer.WriteString("]\n")
 	end_milliseconds := time.Now().UnixMilli()
-	fmt.Printf(fmt.Sprintf("parsing finished, result write to file %s.\n", resultFileName))
-	fmt.Printf(fmt.Sprintf("time use %d ms.\n", (end_milliseconds - start_milliseconds)))
+	fmt.Printf("parsing finished, result write to file %s.\n", resultFileName)
+	fmt.Printf("time use %d ms.\n", (end_milliseconds - start_milliseconds))
 }
 
 // Decode ...
 func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
 	f, err := os.Open(filepath)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "open rdbfile err: %v\n", err)
+		fmt.Fprintf(c.App.ErrWriter, "open rdb file err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}
 	err = rdb.Decode(f, decoder)
 	if err != nil {
-		fmt.Fprintf(c.App.ErrWriter, "decode rdbfile err: %v\n", err)
+		fmt.Fprintf(c.App.ErrWriter, "decode rdb file err: %v\n", err)
 		close(decoder.Entries)
 		return
 	}

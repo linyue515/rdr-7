@@ -21,35 +21,18 @@ import (
 
 	"fmt"
 
-	"github.com/919927181/rdr/decoder"
 	"github.com/919927181/rdr/dump"
 )
 
 //go:generate go-bindata -prefix "static/" -o=static/static.go -pkg=static -ignore static.go static/...
 //go:generate go-bindata -prefix "views/" -o=views/views.go -pkg=views -ignore views.go views/...
 
-// keys is function for command `keys`
-// output all keys in rdb file(s) get from args
-func keys(c *cli.Context) {
-	if c.NArg() < 1 {
-		fmt.Fprintln(c.App.ErrWriter, "keys requires at least 1 argument")
-		cli.ShowCommandHelp(c, "keys")
-		return
-	}
-	for _, filepath := range c.Args() {
-		decoder := decoder.NewDecoder()
-		go dump.Decode(c, decoder, filepath)
-		for e := range decoder.Entries {
-			fmt.Fprintf(c.App.Writer, "%v\n", e.Key)
-		}
-	}
-}
 
 func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
 	app.Usage = "a tool to parse redis rdb file"
-	app.Version = "v1.0.9"
+	app.Version = "v1.1.0"
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
 	app.Commands = []cli.Command{
@@ -60,7 +43,7 @@ func main() {
 			Action:    dump.ToCliWriter,
 		},
 		{
-			Name:      "dumpfile",
+			Name:      "dump2file",
 			Usage:     "dump statistical information of rdb file to file. path:/tmp/rdb_report",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    dump.ToCliWriterToFile,
@@ -80,9 +63,9 @@ func main() {
 		},
 		{
 			Name:      "keys",
-			Usage:     "get all keys from rdb file",
+			Usage:     "get all keys from rdb file, and write to file(/tmp/)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
-			Action:    keys,
+			Action:    dump.Export_All_keys,
 		},
 	}
 	app.CommandNotFound = func(c *cli.Context, command string) {

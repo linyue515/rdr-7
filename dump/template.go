@@ -22,6 +22,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/919927181/rdr/views"
 	"github.com/dustin/go-humanize"
@@ -41,6 +42,13 @@ func InitHTMLTmpl() {
 	tplFuncMap["hash"] = func(str string) string { return fmt.Sprintf("%x", md5.Sum([]byte(str))) }
 	tplFuncMap["humanizeBytes"] = humanize.Bytes
 	tplFuncMap["humanizeComma"] = func(i uint64) string { return humanize.Comma(int64(i)) }
+    tplFuncMap["timestampFormat"] = func(expiry int64) string {
+		if expiry > 0 {
+			return time.Unix(0, expiry*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
+		}else{
+			return ""
+		}
+	}
 
 	// init views html template
 	for _, name := range views.AssetNames() {

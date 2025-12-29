@@ -11,7 +11,7 @@ RDR: redis data reveal
 
 RDR (redis data Reveal) is a tool for offline analysis of redis rdb files. Through it, you can quickly discover bigkeys, help you grasp the occupation and distribution of keys in memory, learn which keys are growing infinitely (through key expiration time or quantity). It provides data support for your optimization operations and helps you avoid problems such as insufficient memory and performance degradation caused by key skew.
 
-- RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具，通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布、得知哪些key在无限增长等，为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
+- RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具，通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
 - RDR由golang实现的，速度上比较快。
 
 
@@ -37,7 +37,7 @@ This repository is fork  from github.com/xueqiu/rdr.  The requrie rdb file parse
  备注：
   - 针对redis7+版本，rdb文件解析主要是解决listpack数据类型问题。鉴于 redis stream 用于消息队列，我们通常不用redis作为mq，因此stream增加的类型未处理。  
   - RDR的核心依赖是 rdb 文件解析，不同版本的 redis，其 rdb 文件存在差异，也会增加新的数据类型，存在数据兼容性问题。
-    - 如果解析高版本的redis时出现错误，可以尝试通过 RedisShake 数据迁移工具，将redis7 RDB数据迁移到redis6下，然后再用rdr\进行分析。
+    - 如果解析高版本redis时出现错误，可以尝试通过 RedisShake 数据迁移工具，将redis7 RDB数据迁移到redis6下，然后再用rdr\进行分析。
 
 
 ## Change（变更）
@@ -50,18 +50,14 @@ This repository is fork  from github.com/xueqiu/rdr.  The requrie rdb file parse
    - v1.0.3 
      - 升级chartjs版本，实现图表tip时，显示更人性化的数字【2025-11-13】
      - 将2021年3月 至 2023年7月，在原作者 github.com/xueqiu/rdr/pulls，除过滤小key外的其他pulls，均同步过来、并解决完毕。
-	 - 遗留问题： redis3.2+新引入的encoding为quicklist作为list的基础类型，list的元素个数是个超大数字，在分析时可能溢出
 	 
    - v1.0.5 
-     - 支持redis7,主要解决了redis7.x底层存储类型使用listpack替代ziplist的解析问题。
+     - 支持redis7+，主要解决了redis7.x底层存储类型使用listpack替代ziplist的解析问题。
 
 
 ## Usage（使用）
 
 ```
-NAME:
-   rdr - a tool to parse redis rdbfile
-
 USAGE:
    rdr [global options] command [command options] [arguments...]
 
@@ -69,9 +65,9 @@ VERSION:
    vx.x.x
 
 COMMANDS:
-     dumpfile dump statistical information of rdb file to file. path:/tmp/rdb_report
+     dumpfile dump statistical information of rdbfile to file（/tmp/rdb-report-xxx.json）.
      show     show statistical information of rdbfile by webpage
-     keys     get all keys from rdbfile
+     keys     get all keys from rdbfile, write to file（/tmp/rdb-all-keys-xxx.txt）.
      help, h  Shows a list of commands or help for one command
 
 GLOBAL OPTIONS:
@@ -90,13 +86,6 @@ OPTIONS:
    --port value, -p value  Port for rdr to listen (default: 8080)
 ```
 
-```
-NAME:
-   rdr keys - get all keys from rdbfile
-
-USAGE:
-   rdr keys FILE1 [FILE2] [FILE3]...
-```
 
 ### linux下使用说明
 
@@ -134,33 +123,43 @@ USAGE:
 ## Exapmle
 ```
 # 通过网页显示rdb file的统计信息
-$ GOGC=200 ./rdr show -p 8080 dump.rdb
+$ GOGC=200 ./rdr-linux show -p 8080 dump.rdb
 ```
 Note that the memory usage is approximate.
 <img width="1155" height="612" alt="image" src="https://github.com/user-attachments/assets/a8b16a78-b232-4282-b2ff-781f0cc87504" />
 
 ```
-# 获取所有key，输出在STDOUT
-$ ./rdr keys example.rdb
-portfolio:stock_follower_count:ZH314136
-portfolio:stock_follower_count:ZH654106
-portfolio:stock_follower:ZH617824
-portfolio:stock_follower_count:ZH001019
-portfolio:stock_follower_count:ZH346349
-portfolio:stock_follower_count:ZH951803
-portfolio:stock_follower:ZH924804
-portfolio:stock_follower_count:INS104806
-
-# 将统计结果写到文件，文件路径在/tmp/rdb_report
+# 将统计结果写到文件（/tmp/rdb-report-xxx.json）
 $ GOGC=200 ./rdr-linux  dumpfile  dump.rdb
+
+
+# 获取所有key，输出到文件（/tmp/rdb-all-keys-xxx.txt），方便你自行分析
+$ ./rdr-linux keys dump.rdb
+key,type,encoding,size,humanizeSize,numOfElem,expiration,db
+student:1:name, string, string, 100, 100 B, 8, , 0
+colors, set, listpack, 94, 94 B, 2, , 0
+
+附-mysql建表语句：
+CREATE TABLE rdb_keys_infor (
+   `id`  int  PRIMARY KEY AUTO_INCREMENT,
+    `key` varchar(300)  NOT NULL COMMENT 'key名',
+    `type` varchar(30)  NOT NULL COMMENT '类型',
+    `encoding` varchar(30)  NOT NULL COMMENT '底层类型',
+    `size` int NOT NULL COMMENT '内存使用',
+    `humanizeSize` varchar(30) NOT NULL COMMENT '内存使用',
+    `numOfElem` int NOT NULL COMMENT '元素数量',
+    `expiration`  varchar(30)   COMMENT '过期时间',
+    `db` int NOT NULL COMMENT 'db'
+) ENGINE = InnoDB COMMENT = 'redis key信息表';
+
 ```
 
 ## 常见问题
 
 ```
-Q：为什么使用命令（memory usage ）获取的和rdr算的总是不一致
+Q：为什么使用 memory usage 命令和rdr算的内存使用不一致？
 A：Key和value所对应的struct和指针大小。在jemalloc分配后，字节对齐部分所占用的大小也会计算在used_memory中
-   无论是用命令还是rdr都计算了这两块，为什么不一致？可读下 https://blog.csdn.net/f80407515/article/details/122387859
+   rdr分析的key内存占用是一个近似值。无论是用命令还是rdr都计算了这两块，为什么不一致？可读下 https://blog.csdn.net/f80407515/article/details/122387859
 
 Q：如何处理报错decode rdbfile error: rdb: unknown object type 116 for key？
 A：该报错表示实例中存在非标准或新版本增加的数据结构，暂不支持分析，你可以在还原到测试实例删除后再进行分析。
@@ -231,16 +230,16 @@ A: v1.0.9版本起，把db都显示出来，以逗号隔开。
  rdr工具的核心部分就是rdb文件解析，作为开发者，我们可以通过以下几个途径来掌握相关知识：
 
 1. 大部分 rdb 文件的解析都是按照 https://github.com/sripathikrishnan/redis-rdb-tools/wiki/Redis-RDB-Dump-File-Format  和 github.com/cupcake/rdb 来的，
-   RDB 文件格式说明：https://www.cnblogs.com/Finley/p/16251360.html   ，完整解析器源码在 github.com/HDT3213/rdb
+   RDB 文件格式说明：https://www.cnblogs.com/Finley/p/16251360.html ，完整解析器源码在 github.com/HDT3213/rdb
 
-2. Redis迁移工具RedisShake（语言golang），功能之一 从 RDB 文件中读取数据写入目标端，因此，我们可以借鉴rdb文件解析功能
+2. Redis迁移工具RedisShake（语言golang），从 RDB 文件中读取数据写入目标端，我们可以参考这块的代码。
    项目地址：https://github.com/tair-opensource/RedisShake
    rdb.go源码地址：https://github.com/tair-opensource/RedisShake/tree/v4/internal/rdb
 
-3. 可以对照 redis 源码
+3. 对照 redis 源码
 
 ```
-  rdb.c 文件：https://github.com/redis/redis/blob/7.0-rc3/src/rdb.c       // RDB 文件读写，行1736：robj *rdbLoadObject
+  rdb.c 文件：https://github.com/redis/redis/blob/7.0-rc3/src/rdb.c     // RDB 文件读写，行1736：robj *rdbLoadObject
   rdb.h 文件：https://github.com/redis/redis/blob/unstable/src/rdb.h   // RDB version、RDB object types 等定义
 
 ```
@@ -264,7 +263,7 @@ A: v1.0.9版本起，把db都显示出来，以逗号隔开。
 
 添加微信（Sd-LiYanJing），备注GitHub-rdr，即可进群
 
-注：如果本工具对您有所帮助，请动动发财的小手，给项目点个赞（点击 Star ），您的一票，是对我们最大的支持！
+最后，欢迎Star，欢迎开发者加入！
 
 
 ## License
