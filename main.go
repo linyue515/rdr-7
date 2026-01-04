@@ -44,7 +44,7 @@ func main() {
 		},
 		{
 			Name:      "dump2file",
-			Usage:     "dump statistical information of rdb file to file. path:/tmp/rdb_report",
+			Usage:     "dump statistical information of rdb file to file(./rdb-report-xxx.json)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    dump.ToCliWriterToFile,
 		},
@@ -63,7 +63,7 @@ func main() {
 		},
 		{
 			Name:      "keys",
-			Usage:     "get all keys from rdb file, and write to file(/tmp/)",
+			Usage:     "get all keys from rdb file, and write to file(./rdb-all-keys-xxx.txt)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    dump.Export_All_keys,
 		},

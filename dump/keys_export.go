@@ -26,7 +26,7 @@ func Export_All_keys(cli *cli.Context) {
 	}
 	cst := time.FixedZone("CST", 8*60*60)
 	currentTime := time.Now().In(cst)
-	exportFileName := fmt.Sprintf("/tmp/rdb-all-keys-%s.txt", currentTime.Format("20060102-150405"))
+	exportFileName := fmt.Sprintf("rdb-all-keys-%s.txt", currentTime.Format("20060102-150405"))
 
 	// 创建或打开文件，追加模式; os.O_APPEND|os.O_CREATE|os.O_WRONLY表示以追加模式打开文件，如果文件不存在则创建，并且只允许写入0644
 	file, err := os.OpenFile(exportFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -35,6 +35,7 @@ func Export_All_keys(cli *cli.Context) {
 		return
 	}
 	defer file.Close()
+
 
 	//使用 bufio.Writer 可减少系统调用，提升性能,适合大量数据
 	fileWriter := bufio.NewWriter(file)
@@ -55,12 +56,16 @@ func Export_All_keys(cli *cli.Context) {
 		go Decode(cli, rdbDecoder, rdb_file)
 
 		fmt.Fprintln(cli.App.Writer, "write to file start ...")
-		fileWriter.WriteString("key,type,encoding,size,humanizeSize,numOfElem,expiration,db\n")
+		fileWriter.WriteString("key,type,encoding,size,humanizeSize,numOfElem,expiration,lruIdle,lfuFreq,db\n")
 
 		for e := range rdbDecoder.Entries {
-			expiryStr := ""
+			expiryStr := ""  //key的过期时间
 			if e.Expiration > 0 {
 				expiryStr = time.Unix(0, e.Expiration*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
+			}
+			lruIdleStr:=""
+			if e.lruIdle > 0 {
+				lruIdleStr = time.Unix(0, e.lruIdle*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
 			}
 
 			rowWords := []string{
@@ -71,6 +76,8 @@ func Export_All_keys(cli *cli.Context) {
 				humanize.Bytes(e.Bytes),
 				strconv.FormatUint(e.NumOfElem, 10),
 				expiryStr,
+				lruIdleStr,
+				strconv.Itoa(e.lfuFreq),
 				strconv.Itoa(e.Db),
 			}
 
@@ -80,7 +87,7 @@ func Export_All_keys(cli *cli.Context) {
 	}
 
 	end_milliseconds := time.Now().UnixMilli()
-	fmt.Printf("export finished, all keys have write to file %s.\n", exportFileName)
+	fmt.Printf("export finished, all keys have write to file ./%s.\n", exportFileName)
 	fmt.Printf("time use %d ms.\n", (end_milliseconds - start_milliseconds))
 
 }

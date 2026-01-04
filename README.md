@@ -42,7 +42,7 @@ This repository is fork  from github.com/xueqiu/rdr.  The requrie rdb file parse
 
 ## Change（变更）
 - caiqing0204：增加了key所属DB，这样可以更直观的查看key元信息。
-- 泰山李工（Me）：
+- 泰山李工（我）：
    - v1.0.2
      - 将依赖 github.com/dongmx/rdb 中的rdbVersion 由9改成20【2025-11-08】
      - 修改html布局、将标题英文改为中文 【2025-11-08】
@@ -52,7 +52,7 @@ This repository is fork  from github.com/xueqiu/rdr.  The requrie rdb file parse
      - 将2021年3月 至 2023年7月，在原作者 github.com/xueqiu/rdr/pulls，除过滤小key外的其他pulls，均同步过来、并解决完毕。
 	 
    - v1.0.5 
-     - 支持redis7+，主要解决了redis7.x底层存储类型使用listpack替代ziplist的解析问题。
+     - 完成redis7+支持，主要解决了redis7.x底层存储类型使用listpack替代ziplist的解析问题。
 
 
 ## Usage（使用）
@@ -65,7 +65,7 @@ VERSION:
    vx.x.x
 
 COMMANDS:
-     dumpfile dump statistical information of rdbfile to file（/tmp/rdb-report-xxx.json）.
+     dumpfile dump statistical information of rdbfile to file(./rdb-report-xxx.json).
      show     show statistical information of rdbfile by webpage
      keys     get all keys from rdbfile, write to file（/tmp/rdb-all-keys-xxx.txt）.
      help, h  Shows a list of commands or help for one command
@@ -116,7 +116,7 @@ OPTIONS:
 		   
 6.查看分析结果，浏览器访问 http://yourip：8099/
 
-附-windows下使用，打开cmd，执行：
+附-windows下使用，打开 cmd 执行：
 > .\rdr-win64.exe show -p 8099 dump.rdb
 ```
 
@@ -129,12 +129,12 @@ Note that the memory usage is approximate.
 <img width="1155" height="612" alt="image" src="https://github.com/user-attachments/assets/a8b16a78-b232-4282-b2ff-781f0cc87504" />
 
 ```
-# 将统计结果写到文件（/tmp/rdb-report-xxx.json）
+# 将统计结果写到文件（当前目录/rdb-report-xxx.json）
 $ GOGC=200 ./rdr-linux  dumpfile  dump.rdb
 
 
-# 获取所有key，输出到文件（/tmp/rdb-all-keys-xxx.txt），方便你自行分析
-$ ./rdr-linux keys dump.rdb
+# 获取所有key，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析之需要。
+$ GOGC=200 ./rdr-linux keys dump.rdb
 key,type,encoding,size,humanizeSize,numOfElem,expiration,db
 student:1:name, string, string, 100, 100 B, 8, , 0
 colors, set, listpack, 94, 94 B, 2, , 0
