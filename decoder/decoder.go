@@ -34,8 +34,8 @@ type Entry struct {
 	Db                 int
 	Encoding           string
 	Expiration         int64
-	lruIdle            uint64
-	lfuFreq            int
+	LruIdle            uint64
+	LfuFreq            int
 }
 
 // Decoder decode rdb file
@@ -122,8 +122,8 @@ func (d *Decoder) StartStream(key []byte, cardinality, expiry int64, info *rdb.I
 		NumOfElem:        0,
 		LenOfLargestElem: 0,
 		Expiration:       expiry,
-		lruIdle:          info.Idle,
-		lfuFreq:          info.Freq,
+		LruIdle:          info.Idle,
+		LfuFreq:          info.Freq,
 		Db:               d.Db,
 	}
 }
@@ -164,8 +164,8 @@ func (d *Decoder) Set(key, value []byte, expiry int64, info *rdb.Info) {
 		Encoding:   info.Encoding,
 		NumOfElem:  d.m.ElemLen(value),
 		Expiration: expiry,
-		lruIdle:    info.Idle,
-		lfuFreq:    info.Freq,
+		LruIdle:    info.Idle,
+		LfuFreq:    info.Freq,
 		Db:         d.Db,
 	}
 	d.Entries <- e
@@ -196,8 +196,8 @@ func (d *Decoder) StartHash(key []byte, length, expiry int64, info *rdb.Info) {
 		Encoding:   info.Encoding,
 		NumOfElem:  uint64(length),
 		Expiration: expiry,
-		lruIdle:    info.Idle,
-		lfuFreq:    info.Freq,
+		LruIdle:    info.Idle,
+		LfuFreq:    info.Freq,
 		Db:         d.Db,
 	}
 }
@@ -255,8 +255,8 @@ func (d *Decoder) StartSet(key []byte, cardinality, expiry int64, info *rdb.Info
 		Encoding:   info.Encoding,
 		NumOfElem:  uint64(cardinality),
 		Expiration: expiry,
-		lruIdle:    info.Idle,
-		lfuFreq:    info.Freq,
+		LruIdle:    info.Idle,
+		LfuFreq:    info.Freq,
 		Db:         d.Db,
 	}
 
@@ -309,8 +309,8 @@ func (d *Decoder) StartList(key []byte, length, expiry int64, info *rdb.Info) {
 		Encoding:   info.Encoding,
 		NumOfElem:  0,
 		Expiration: expiry,
-		lruIdle:    info.Idle,
-		lfuFreq:    info.Freq,
+		LruIdle:    info.Idle,
+		LfuFreq:    info.Freq,
 		Db:         d.Db,
 	}
 }
@@ -419,8 +419,8 @@ func (d *Decoder) StartZSet(key []byte, cardinality, expiry int64, info *rdb.Inf
 		Encoding:   info.Encoding,
 		NumOfElem:  uint64(cardinality),
 		Expiration: expiry,
-		lruIdle:    info.Idle,
-		lfuFreq:    info.Freq,
+		LruIdle:    info.Idle,
+		LfuFreq:    info.Freq,
 		Db:         d.Db,
 	}
 }

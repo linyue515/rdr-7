@@ -57,15 +57,14 @@ func Export_All_keys(cli *cli.Context) {
 
 		fmt.Fprintln(cli.App.Writer, "write to file start ...")
 		fileWriter.WriteString("key,type,encoding,size,humanizeSize,numOfElem,expiration,lruIdle,lfuFreq,db\n")
-
 		for e := range rdbDecoder.Entries {
 			expiryStr := ""  //key的过期时间
 			if e.Expiration > 0 {
 				expiryStr = time.Unix(0, e.Expiration*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
 			}
 			lruIdleStr:=""
-			if e.lruIdle > 0 {
-				lruIdleStr = time.Unix(0, e.lruIdle*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
+			if e.LruIdle > 0 {
+				lruIdleStr = time.Unix(0, int64(e.LruIdle)*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
 			}
 
 			rowWords := []string{
@@ -77,7 +76,7 @@ func Export_All_keys(cli *cli.Context) {
 				strconv.FormatUint(e.NumOfElem, 10),
 				expiryStr,
 				lruIdleStr,
-				strconv.Itoa(e.lfuFreq),
+				strconv.Itoa(e.LfuFreq),
 				strconv.Itoa(e.Db),
 			}
 
