@@ -32,7 +32,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
 	app.Usage = "a tool to parse redis rdb file"
-	app.Version = "v1.1.0"
+	app.Version = "v1.1.1"
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
 	app.Commands = []cli.Command{

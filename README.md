@@ -135,9 +135,9 @@ $ GOGC=200 ./rdr-linux  dumpfile  dump.rdb
 
 # 获取所有key，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析之需要。
 $ GOGC=200 ./rdr-linux keys dump.rdb
-key,type,encoding,size,humanizeSize,numOfElem,expiration,db
-student:1:name, string, string, 100, 100 B, 8, , 0
-colors, set, listpack, 94, 94 B, 2, , 0
+key,type,encoding,size,humanizeSize,numOfElem,expiration,lruIdle,lfuFreq,db
+student:1:name, string, string, 100, 100 B, 8, , , 0, 0
+colors, set, listpack, 94, 94 B, 2, , , 0, 0
 
 附-mysql建表语句：
 CREATE TABLE rdb_keys_infor (
@@ -151,6 +151,10 @@ CREATE TABLE rdb_keys_infor (
     `expiration`  varchar(30)   COMMENT '过期时间',
     `db` int NOT NULL COMMENT 'db'
 ) ENGINE = InnoDB COMMENT = 'redis key信息表';
+
+备注，根据maxmemory-policy配置的淘汰策略，我们可以找出冷数据：
+  - 如果策略是volatile-lru或allkeys-lru，记录的是Key的最后一次访问时间（lruIdle）。
+  - 如果策略包含LFU（如volatile-lfu），记录的是访问频率（lfuFreq）。
 
 ```
 
