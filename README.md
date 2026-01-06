@@ -11,16 +11,28 @@ RDR: redis data reveal
 
 RDR (redis data Reveal) is a tool for offline analysis of redis rdb files. Through it, you can quickly discover bigkeys, help you grasp the occupation and distribution of keys in memory, learn which keys are growing infinitely (through key expiration time or quantity). It provides data support for your optimization operations and helps you avoid problems such as insufficient memory and performance degradation caused by key skew.
 
-- RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具，通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
-- RDR由golang实现的，速度上比较快。
+RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具，通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
 
+ 功能：
+  - 统计信息展示（command:show）：以网页的形式展示 RDB 文件的统计信息（如按数据类型分布，Top 200大Key列表和前缀分析等），使用起来非便捷。
+  - 统计信息保存(command:dumpfile)：除了在线网页展示外，还可以将统计信息保存到文件。
+  - 获取所有key（command:key）：从 RDB 文件中获取所有的键名以及属性信息（数据类型、元素数量、过期时间、所属db等），保存到文件，以便自行分析。
+ 
+ 特点： 
+  - 安全无扰：分析过程完全在 RDB 备份文件上进行，对线上Redis实例零影响。
+  - 使用方便：提供了linux和windows下的可执行文件，不需要安装；一键生成内存健康报告，在线图形化（html）展示更直观。
+  - 高效解析：RDR由golang实现的，RDR 解析速度上比较快。是解析大rdb文件的利器，一个10G的rdb文件，用时不到4分钟。
+  - 结果精准：结果反映的是RDB快照生成时刻的精确状态。
+  - 庖丁解牛：深入RDB文件结构与LRU元数据原理，犹如为缓存做了一次精准的“核磁共振”检查。
+
+注意：生产环境下慎行，以免对线上实例产生性能影响，我们可以在从节点或拷贝rdb文件到测试机上去执行。
 
 ## Fork（基于）
 
 This repository is fork  from github.com/xueqiu/rdr.  The requrie rdb file parse is github.com/dongmx/rdb ，in this project has been replaced  github.com/919927181/rdb
 
 - 本项目基于 xueqiu/rdr 开源项目开发，实现了对redis7+的支持。
-- 核心依赖包 919927181/rdb（基于dongmx/rdb）解析redis rdb 文件。
+- 核心依赖包 919927181/rdb（源自dongmx/rdb）解析redis rdb 文件。
 
 注：xueqiu/rdr是雪球公司基于redis-rdb-tool开源项目开发的，更新维护停止在 2019 年 10 月 9 日。
 
@@ -90,7 +102,7 @@ OPTIONS:
 ### linux下使用说明
 
 ```
-1. 从releases中，下载 linux 下的可执行文件
+1.从releases中，下载 linux 下的可执行文件
 
 2.创建目录
 # mkdir -p /tmp/rdb/
@@ -103,8 +115,7 @@ OPTIONS:
 
 4.运行
 # GOGC=200 ./rdr-linux show -p 8099 *.rdb
-注意,如果你的rdb文件比较大（1G+）：
-    建议一次只分析一个rdb文件
+注意,如果你的rdb文件比较大（1G+）,建议一次只分析一个rdb文件
     如果rdb文件大，那么cpu使用率就会过高，此时我们调整GOGC，默认100，提高值(200-400)可降低GC频率，减少CPU占用但会增加内存使用
 
 
@@ -114,10 +125,19 @@ OPTIONS:
           sudo firewall-cmd --zone=public --add-port=8099/tcp --permanent
            sudo firewall-cmd --reload
 		   
-6.查看分析结果，浏览器访问 http://yourip：8099/
+6.查看分析报告，浏览器访问 http://your-host:8099/
+```
 
-附-windows下使用，打开 cmd 执行：
-> .\rdr-win64.exe show -p 8099 dump.rdb
+### windows下使用说明
+```
+ 1. 从releases中，下载 windows 下的可执行文件
+
+ 2. 将rdr工具、redis的数据库文件.rdb拷贝到某个文件夹下
+
+ 3. 在该文件夹下空白的地方，ctrl+鼠标右击，打开 cmd 执行：
+    > .\rdr-win64.exe show -p 8099 dump.rdb
+
+ 4. 查看分析报告，打开浏览器访问 http://localhost:8099 
 ```
 
 ## Exapmle
