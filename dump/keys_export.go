@@ -62,7 +62,8 @@ func Export_All_keys(cli *cli.Context) {
 			if e.Expiration > 0 {
 				expiryStr = time.Unix(0, e.Expiration*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
 			}
-			lruIdleStr:=""  //key的最后一次访问时间，maxmemory-policy配置的淘汰策略是volatile-lru或allkeys-lru，它记录的是Key的最后一次访问时间
+			// key的最后一次访问时间,maxmemory-policy配置的淘汰策略是volatile-lru或allkeys-lru,它记录的是Key的最后一次访问时间
+			lruIdleStr := ""
 			if e.LruIdle > 0 {
 				lruIdleStr = time.Unix(0, int64(e.LruIdle)*int64(time.Millisecond)).Format("2006-01-02 15:04:05")
 			}
