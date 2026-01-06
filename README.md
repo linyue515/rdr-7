@@ -150,7 +150,7 @@ Note that the memory usage is approximate.
 
 ```
 # 将统计结果写到文件（当前目录/rdb-report-xxx.json）
-$ GOGC=200 ./rdr-linux  dumpfile  dump.rdb
+$ GOGC=200 ./rdr-linux  dump2file  dump.rdb
 
 
 # 获取所有key，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析之需要。
