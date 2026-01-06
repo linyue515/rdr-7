@@ -14,14 +14,14 @@ RDR (redis data Reveal) is a tool for offline analysis of redis rdb files. Throu
 RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具，通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
 
  功能：
-  - 统计信息展示（command:show）：以网页的形式展示 RDB 文件的统计信息（如按数据类型分布，Top 200大Key列表和前缀分析等），使用起来非便捷。
+  - 统计信息展示（command:show）：以网页的形式展示 RDB 文件的统计信息（如按数据类型分布，Top 200大Key列表和前缀分析等）。
   - 统计信息保存(command:dump2file)：除了在线网页展示外，还可以将统计信息保存到文件。
-  - 获取所有key（command:keys）：从 RDB 文件中获取所有的键名以及属性信息（数据类型、元素数量、过期时间、所属db等），保存到文件，以便自行分析。
+  - 获取所有key（command:keys）：从 RDB 文件中获取所有的键名以及属性信息（数据类型、内存大小、元素数量、过期时间、所属db等），保存到文件，以便自行分析。
  
- 特点： 
+ 特点：
   - 安全无扰：分析过程完全在 RDB 备份文件上进行，对线上Redis实例零影响。
   - 使用方便：提供了linux和windows下的可执行文件，不需要安装；一键生成内存健康报告，在线图形化（html）展示更直观。
-  - 高效解析：RDR由golang实现的，RDR 解析速度上比较快。是解析大rdb文件的利器，一个10G的rdb文件，用时不到4分钟。
+  - 高效解析：RDR由golang实现的，因此，解析速度上比较快，一个10G的rdb文件，用时不到4分钟。
   - 结果精准：结果反映的是RDB快照生成时刻的精确状态。
   - 庖丁解牛：深入RDB文件结构与LRU元数据原理，犹如为缓存做了一次精准的“核磁共振”检查。
 
@@ -117,7 +117,6 @@ OPTIONS:
 # GOGC=200 ./rdr-linux show -p 8099 *.rdb
 注意,如果你的rdb文件比较大（1G+）,建议一次只分析一个rdb文件
     如果rdb文件大，那么cpu使用率就会过高，此时我们调整GOGC，默认100，提高值(200-400)可降低GC频率，减少CPU占用但会增加内存使用
-
 
 5.防火墙端口放行
      For Ubuntu\Debian：sudo ufw allow 8099/tcp  &&  sudo ufw reload
