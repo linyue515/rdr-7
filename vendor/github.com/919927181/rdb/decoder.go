@@ -1795,8 +1795,8 @@ func (d *decode) readStreamGroups(version int) (StreamGroups, error) {
 			if version >=2 {
 				consumer.ActiveTime,err = d.readUint64()
 				if err != nil {
-                	return nil, err
-            	}
+					return nil, err
+				}
 			}
             pelSize, _, err := d.readLength()
             if err != nil {
