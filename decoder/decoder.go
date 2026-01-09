@@ -114,6 +114,15 @@ func (d *Decoder) StartStream(key []byte, cardinality, expiry int64, info *rdb.I
 	bytes += d.m.SizeofStreamRadixTree(uint64(cardinality))
 
 	d.currentInfo = info
+
+	//参考于https://github.com/linyue515/rdr add support 7.0 rdb format
+	if info.Encoding == "stream_v2" {
+		bytes += 16*2 + 8
+	}
+	if info.SizeOfValue >0 {
+		bytes += uint64(info.SizeOfValue)
+	}
+
 	d.currentEntry = &Entry{
 		Key:              keyStr,
 		Bytes:            bytes,
@@ -130,6 +139,7 @@ func (d *Decoder) StartStream(key []byte, cardinality, expiry int64, info *rdb.I
 
 func (d *Decoder) Xadd(key, id, listpack []byte) {
 	e := d.currentEntry
+	e.NumOfElem++
 	e.Bytes += d.m.mallocOverhead(uint64(len(listpack)))
 }
 
@@ -140,7 +150,9 @@ func (d *Decoder) EndStream(key []byte, items uint64, lastEntryID string, cgroup
 		pendingLength := uint64(len(cg.Pending))
 		e.Bytes += d.m.SizeofStreamRadixTree(pendingLength)
 		e.Bytes += d.m.StreamNACK(pendingLength)
-
+		if d.currentInfo.Encoding == "stream_v2" {
+			e.Bytes += 8
+		}
 		for _, c := range cg.Consumers {
 			e.Bytes += d.m.StreamConsumer(c.Name)
 			pendingLength := uint64(len(cg.Pending))
@@ -316,7 +328,7 @@ func (d *Decoder) StartList(key []byte, length, expiry int64, info *rdb.Info) {
 }
 
 // Rpush is called once for each value in a list.
-func (d *Decoder) Rpush(key, value []byte) {
+func (d *Decoder) Rpush(key, value []byte, NodeEncodings uint64) {
 	//keyStr := string(key)
 	e := d.currentEntry
 	e.NumOfElem++
@@ -326,28 +338,23 @@ func (d *Decoder) Rpush(key, value []byte) {
 		e.Bytes += d.m.ZipListEntryOverHead(value)
 	case "ziplist":
 		e.Bytes += d.m.ZipListEntryOverHead(value)
-
 	case "linkedlist":
 		sizeInlist := uint64(0)
 		if _, err := strconv.ParseInt(string(value), 10, 32); err != nil {
 			sizeInlist = d.m.SizeofString(value)
 		}
-
 		e.Bytes += d.m.LinkedListEntryOverHead()
 		e.Bytes += sizeInlist
-
 		if d.rdbVer < 10 {
 			e.Bytes += d.m.RobjOverHead()
 		}
-
 	case "quicklist2":
-		if _, err := strconv.ParseInt(string(value), 10, 32); err != nil {
-			e.Bytes += d.m.SizeofString(value) //参考 github.com/hdt3213/rdb/memprofiler
+		//quickListNodeContainerPacked=2的则在EndList中计算
+		if NodeEncodings == 1 {
+			if _, err := strconv.ParseInt(string(value), 10, 32); err != nil {
+				e.Bytes += d.m.SizeofString(value)
+			}
 		}
-
-	case "listpack":
-		e.Bytes += 0
-
 	default:
 		panic(fmt.Sprintf("unknown encoding:%s", d.currentInfo.Encoding))
 	}
@@ -367,26 +374,23 @@ func (d *Decoder) EndList(key []byte) {
 	case "quicklist":
 		e.Bytes += d.m.QuickListOverHead(d.currentInfo.Zips)
 		e.Bytes += d.m.ZipListHeaderOverHead() * d.currentInfo.Zips
-
 	case "ziplist":
 		e.Bytes += d.m.ZipListHeaderOverHead()
-
 	case "linkedlist":
 		e.Bytes += d.m.LinkedListOverHead()
-
 	case "quicklist2":
-		e.Bytes += 0 //已加到startlist中，因此这里加0
-
-	case "listpack":
 		e.Bytes += d.m.QuickList2OverHead()
-		e.Bytes += d.m.RobjOverHead() * d.currentInfo.Zips
+		e.Bytes += d.m.RobjOverHead() * d.currentInfo.ListPacks
 		//fmt.Printf("2、quicklist2 OverHead use memory  %d for string key %s\n", int(d.m.QuickList2OverHead() + d.m.RobjOverHead() * d.currentInfo.Zips), string(key))
-
+        //quickListNodeContainerPlain类型计算在Rpush，listPackElements计算在EndList
 		if d.currentInfo.SizeOfValue > 0 {
 			e.Bytes += uint64(d.currentInfo.SizeOfValue)
 			//fmt.Printf("3、SizeOfValue use memory  %d for string key %s\n", uint64(d.currentInfo.SizeOfValue), string(key))
 		}
-
+		// github.com/linyue515/rdr 在是在方法上传参过来的
+		// if info.SizeOfValue > 0 {
+		// 	e.Bytes += uint64(info.SizeOfValue)
+		// }
 	default:
 		panic(fmt.Sprintf("unknown encoding:%s", d.currentInfo.Encoding))
 	}
