@@ -14,7 +14,7 @@ import (
 )
 
 /**
- * @file about: 将统计结果输出到STDOUT 或 File
+ * @file about: 获取所有key及属性信息输出到File
  */
 
 // keys is function for command `keys`
