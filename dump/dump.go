@@ -18,8 +18,11 @@ import (
  * @file about: 将统计结果输出到STDOUT 或 File
  */
 
-// Dump rdb file statistical information
+// Dump rdb file statistical information, 此方法不再用了，因为有了输出到STDOUT 或 file
 func Dump(path string) (map[string]interface{}, error) {
+	topN := 300      // top N bigkey (按内存),最大500
+	sizeFilter := 0  // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
+
 	var data map[string]interface{}
 	decoder := decoder.NewDecoder()
 	go func() {
@@ -38,7 +41,7 @@ func Dump(path string) (map[string]interface{}, error) {
 	cnt := NewCounter()
 	cnt.Count(decoder.Entries)
 	filename := filepath.Base(path)
-	data = GetData(filename, cnt)
+	data = GetData(filename, cnt, topN, int64(sizeFilter))
 	return data, nil
 }
 
@@ -48,6 +51,8 @@ func ToCliWriter(cli *cli.Context) {
 		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
 		return
 	}
+	topN := 100      // top N bigkey (按内存),最大500
+	sizeFilter := 0  // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
 
 	// parse rdb file
 	fmt.Fprintln(cli.App.Writer, "[")
@@ -59,7 +64,7 @@ func ToCliWriter(cli *cli.Context) {
 		cnt := NewCounter()
 		cnt.Count(rdbDecoder.Entries)
 		filename := filepath.Base(file)
-		data := GetData(filename, cnt)
+		data := GetData(filename, cnt, topN, int64(sizeFilter))
 		data["MemoryUse"] = rdbDecoder.GetUsedMem()
 		data["CTime"] = rdbDecoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
@@ -79,6 +84,20 @@ func ToCliWriterToFile(cli *cli.Context) {
 		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
 		return
 	}
+
+    // top N bigkey (按内存), 最大500
+	topN := cli.Int("num")
+    if topN > 500 {
+		fmt.Fprintln(cli.App.ErrWriter, " Please pass a number less than 500!")
+		return
+	}
+	// 将带单位的字符串转换为字节数, GetLargestEntries 过滤掉小于阈值sizeFilter的key，传0表示不过滤
+	sizeFilter, err := ParseUnitToBytes(cli.String("size"))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
 	cst := time.FixedZone("CST", 8*60*60)
 	currentTime := time.Now().In(cst)
 	resultFileName := fmt.Sprintf("rdb-report-%s.json", currentTime.Format("20060102-150405"))
@@ -110,7 +129,7 @@ func ToCliWriterToFile(cli *cli.Context) {
 		cnt := NewCounter()
 		cnt.Count(rdbDecoder.Entries)
 		filename := filepath.Base(rdb_file)
-		data := GetData(filename, cnt)
+		data := GetData(filename, cnt, topN, sizeFilter)
 		data["MemoryUse"] = rdbDecoder.GetUsedMem()
 		data["CTime"] = rdbDecoder.GetTimestamp()
 		jsonBytes, _ := json.MarshalIndent(data, "", "    ")
@@ -143,10 +162,10 @@ func Decode(c *cli.Context, decoder *decoder.Decoder, filepath string) {
 	}
 }
 
-func GetData(filename string, cnt *Counter) map[string]interface{} {
+func GetData(filename string, cnt *Counter, topN int, sizeFilter int64) map[string]interface{} {
 	data := make(map[string]interface{})
 	data["CurrentInstance"] = filename
-	data["LargestKeys"] = cnt.GetLargestEntries(200) //top 200 bigkey (按内存)
+	data["LargestKeys"] = cnt.GetLargestEntries(topN, sizeFilter) //top N bigkey (按内存)，sizeFilter过滤小于阈值的key
 
 	largestKeyPrefixesByType := map[string][]*PrefixEntry{}
 	for _, entry := range cnt.GetLargestKeyPrefixes() {
@@ -190,8 +209,7 @@ func GetData(filename string, cnt *Counter) map[string]interface{} {
 			Slot: slot, Size: size,
 		})
 	}
-	//top 200 bigkey (按内存)
-	topN := 200
+
 	slotBytes := make(slotHeap, 0, topN)
 	slotNums := make(slotHeap, 0, topN)
 

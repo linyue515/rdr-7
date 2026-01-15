@@ -577,7 +577,7 @@ func (d *decode) readObject(key []byte, typ ValueType, expiry int64) error {
 		fallthrough
 	case TypeModule2:
 		return d.readModule(key, expiry)
-	//TypeListQuickList2、TypeHashListPack、TypeZsetListPack、TypeSetListPack 参考的阿里云的RedisShake，方便扩展新数据类型
+	//TypeListQuickList2、TypeHashListPack、TypeZsetListPack、TypeSetListPack 参考的阿里云长期维护的RedisShake
 	case TypeListQuickList2:
 		length, _, err := d.readLength()
 		if err != nil {

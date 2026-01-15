@@ -19,7 +19,7 @@ import (
 
 // keys is function for command `keys`
 // output all keys in rdb file(s) get from args
-func Export_All_keys(cli *cli.Context) {
+func Export_All_Keys(cli *cli.Context) {
 	if cli.NArg() < 1 {
 		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
 		return

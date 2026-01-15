@@ -32,7 +32,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
 	app.Usage = "a tool to parse redis rdb file"
-	app.Version = "v1.1.2"
+	app.Version = "v1.1.3"
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
 	app.Commands = []cli.Command{
@@ -46,6 +46,18 @@ func main() {
 			Name:      "dump2file",
 			Usage:     "dump statistical information of rdb file to file(./rdb-report-xxx.json)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
+			Flags: []cli.Flag{
+				cli.IntFlag{
+					Name:  "num, n",
+					Value: 100,
+					Usage: " top N big keys, max is 500",
+				},
+				cli.StringFlag{
+					Name:  "size, s",
+					Value: "0kb",
+					Usage: " when GetLargestEntries, then filter keys smaller than threshold. supported units is B/KB/MB/GB, and can be lowercase",
+				},
+			},
 			Action:    dump.ToCliWriterToFile,
 		},
 		{
@@ -58,6 +70,16 @@ func main() {
 					Value: 8080,
 					Usage: "Port for rdr to listen",
 				},
+				cli.IntFlag{
+					Name:  "num, n",
+					Value: 100,
+					Usage: " top N big keys, max is 500",
+				},
+				cli.StringFlag{
+					Name:  "size, s",
+					Value: "0kb",
+					Usage: " when GetLargestEntries, then filter keys smaller than threshold. supported units is B/KB/MB/GB, and can be lowercase",
+				},
 			},
 			Action: dump.Show,
 		},
@@ -65,7 +87,7 @@ func main() {
 			Name:      "keys",
 			Usage:     "get all keys from rdb file, and write to file(./rdb-all-keys-xxx.txt)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
-			Action:    dump.Export_All_keys,
+			Action:    dump.Export_All_Keys,
 		},
 	}
 	app.CommandNotFound = func(c *cli.Context, command string) {

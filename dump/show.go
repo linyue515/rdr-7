@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/919927181/rdr/decoder"
@@ -52,6 +53,19 @@ func Show(c *cli.Context) {
 		return
 	}
 
+	// top N bigkey (按内存), 最大500
+	topN := c.Int("num")
+	if topN > 500 {
+		fmt.Fprintln(c.App.Writer, " Please pass a number less than 500!")
+		return
+	}
+	// 将带单位的字符串转换为字节数, GetLargestEntries 过滤掉小于阈值sizeFilter的key，传0表示不过滤
+	sizeFilter, err := ParseUnitToBytes(c.String("size"))
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
 	// parse rdbfile
 	fmt.Fprintln(c.App.Writer, "start ...")
 
@@ -72,13 +86,13 @@ func Show(c *cli.Context) {
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)
 						end_milliseconds := time.Now().UnixMilli()
-
 						fmt.Fprintf(c.App.Writer, "parse %v done, time use %d ms.\n", filename, (end_milliseconds - start_milliseconds))
-
 						instances = append(instances, filename)
 						// init html template
 						// init common data in template
 						tplCommonData["Instances"] = instances
+						tplCommonData["TopN"] = strconv.Itoa(topN)
+						tplCommonData["sizeFilter"] = strconv.FormatInt(sizeFilter,10)
 					}
 				}
 

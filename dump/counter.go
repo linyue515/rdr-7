@@ -99,14 +99,21 @@ func (c *Counter) countByDb(e *decoder.Entry) {
 	c.keyPrefixDb[key] = strconv.Itoa(e.Db)
 }
 
-// GetLargestEntries from heap, num max is 500
-func (c *Counter) GetLargestEntries(num int) []*decoder.Entry {
+// GetLargestEntries from heap, num max is 500. 过滤掉小于阈值的key
+func (c *Counter) GetLargestEntries(num int, sizeFilter int64) []*decoder.Entry {
 	res := []*decoder.Entry{}
 
 	// get a copy of c.largestEntries
 	for i := 0; i < c.largestEntries.Len(); i++ {
 		entries := *c.largestEntries
-		res = append(res, entries[i])
+		// 阈值默认为0，当大于0时，将过滤掉小于阈值的key
+		if sizeFilter > 0 {
+			if  entries[i].Bytes > uint64(sizeFilter) {
+				res = append(res, entries[i])
+			}
+		}else {
+			res = append(res, entries[i])
+		}
 	}
 	sort.Sort(sort.Reverse(entryHeap(res)))
 	if num < len(res) {
@@ -227,7 +234,6 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 func (c *Counter) countBySlot(e *decoder.Entry) {
 	if len(e.Key) > 0 {
 		slot := Slot(e.Key)
-
 		c.slotNum[slot]++
 		c.slotBytes[slot] += e.Bytes
 	}
