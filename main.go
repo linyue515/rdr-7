@@ -49,7 +49,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.IntFlag{
 					Name:  "num, n",
-					Value: 100,
+					Value: 300,
 					Usage: " top N big keys, max is 500",
 				},
 				cli.StringFlag{
@@ -72,7 +72,7 @@ func main() {
 				},
 				cli.IntFlag{
 					Name:  "num, n",
-					Value: 100,
+					Value: 300,
 					Usage: " top N big keys, max is 500",
 				},
 				cli.StringFlag{

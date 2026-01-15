@@ -146,6 +146,8 @@ OPTIONS:
 ```
 # 1.通过网页显示rdb file的统计报告
 $ GOGC=200 ./rdr-linux show -p 8080 dump.rdb
+# 从v1.1.3版本起支持，指定获取最大的 N 个键，N默认300，最大500; 指定内存大小过滤参数-s, 可以过滤掉小于该阈值的key，支持的单位为B/KB/MB/GB
+$ GOGC=200 ./rdr-linux show -p 8080 -n 100 -s 10kb  dump.rdb
 ```
 Note that the memory usage is approximate.
 <img width="1155" height="612" alt="image" src="https://github.com/user-attachments/assets/a8b16a78-b232-4282-b2ff-781f0cc87504" />
@@ -154,10 +156,10 @@ Note that the memory usage is approximate.
 # 2.将统计报告信息写到文件（当前目录/rdb-report-xxx.json）
 # 如果你想知道集合类中的哪个元素最大，见报告中的LargestKeys>FieldOfLargestElem字段。
 $ GOGC=200 ./rdr-linux  dump2file  dump.rdb
-# 获取 RDB 文件中最大的 N 个键时，N默认为100，最大500; 加上内存大小过滤参数-s, 就可以过滤掉小于该阈值的key，支持的单位为B/KB/MB/GB
-$ GOGC=200 ./rdr-linux  dump2file -n 300 -s 10kb dump.rdb
+# 从v1.1.3版本起，指定获取最大的 N 个键，N默认300，最大500; 指定内存大小过滤参数-s, 可以过滤掉小于该阈值的key，支持的单位为B/KB/MB/GB
+$ GOGC=200 ./rdr-linux  dump2file -n 100 -s 10kb  dump.rdb
 
-# 解析出所有key及属性信息，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析之需要。
+# 3.解析出所有key及属性信息，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析之需要。
 $ GOGC=200 ./rdr-linux keys dump.rdb
 key,type,encoding,size,humanizeSize,numOfElem,expiration,lruIdle,lfuFreq,db
 student:1:name, string, string, 100, 100 B, 8, , , 0, 0
