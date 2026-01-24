@@ -38,13 +38,13 @@ func main() {
 	app.Commands = []cli.Command{
 		{
 			Name:      "dump",
-			Usage:     "dump statistical information of rdb file to STDOUT",
+			Usage:     "dump statistical report of rdb to STDOUT",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    dump.ToCliWriter,
 		},
 		{
 			Name:      "dump2file",
-			Usage:     "dump statistical information of rdb file to file(./rdb-report-xxx.json)",
+			Usage:     "dump statistical report of rdb to file(./rdb-report-xxx.json)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Flags: []cli.Flag{
 				cli.IntFlag{
@@ -55,14 +55,14 @@ func main() {
 				cli.StringFlag{
 					Name:  "size, s",
 					Value: "0kb",
-					Usage: " when GetLargestEntries, then filter keys smaller than threshold. supported units is B/KB/MB/GB, and can be lowercase",
+					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
 				},
 			},
 			Action:    dump.ToCliWriterToFile,
 		},
 		{
 			Name:      "show",
-			Usage:     "show statistical information of rdb file by webpage",
+			Usage:     "show statistical report of rdb by webpage",
 			ArgsUsage: "DIR1 [DIR2] [DIR3] or FILE1 [FILE2] [FILE3]...",
 			Flags: []cli.Flag{
 				cli.UintFlag{
@@ -78,14 +78,14 @@ func main() {
 				cli.StringFlag{
 					Name:  "size, s",
 					Value: "0kb",
-					Usage: " when GetLargestEntries, then filter keys smaller than threshold. supported units is B/KB/MB/GB, and can be lowercase",
+					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
 				},
 			},
 			Action: dump.Show,
 		},
 		{
 			Name:      "keys",
-			Usage:     "get all keys from rdb file, and write to file(./rdb-all-keys-xxx.txt)",
+			Usage:     "write all keys of rdb to file(./rdb-all-keys-xxx.txt)",
 			ArgsUsage: "FILE1 [FILE2] [FILE3]...",
 			Action:    dump.Export_All_Keys,
 		},

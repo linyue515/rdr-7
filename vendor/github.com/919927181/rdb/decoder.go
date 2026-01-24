@@ -197,7 +197,7 @@ const (
 	TypeListQuickList   ValueType = 14 // RDB_TYPE_LIST_QUICKLIST
 	TypeStreamListPacks ValueType = 15 // RDB_TYPE_STREAM_LISTPACKS，
 
-	//rdb v1.0.5 add，注：Redis Stream 主要用于消息队列，虽然我们一般不会用它，参考 github.com/linyue515/rdr 做了支持，后期有精力时间时再参考RedisShake进行梳理
+	//rdb v1.0.5 add for redis7+，注：Redis Stream 主要用于消息队列，虽然我们一般不会用它，参考 github.com/linyue515/rdr 做了支持，后期有精力时间时再参考RedisShake进行梳理
 	TypeHashListPack     ValueType = 16 // RDB_TYPE_HASH_ZIPLIST
 	TypeZSetListPack     ValueType = 17 // RDB_TYPE_ZSET_LISTPACK
 	TypeListQuickList2   ValueType = 18 // DB_TYPE_LIST_QUICKLIST_2 https://github.com/redis/redis/pull/9357
