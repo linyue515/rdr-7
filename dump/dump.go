@@ -20,8 +20,8 @@ import (
 
 // Dump rdb file statistical information, 此方法不再用了，因为有了输出到STDOUT 或 file
 func Dump(path string) (map[string]interface{}, error) {
-	topN := 300      // top N bigkey (按内存),最大500
-	sizeFilter := 0  // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
+	topN := 300     // top N bigkey (按内存),最大500
+	sizeFilter := 0 // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
 
 	var data map[string]interface{}
 	decoder := decoder.NewDecoder()
@@ -38,7 +38,7 @@ func Dump(path string) (map[string]interface{}, error) {
 			return
 		}
 	}()
-	cnt := NewCounter()
+	cnt := NewCounter(NewCounterConfig())
 	cnt.Count(decoder.Entries)
 	filename := filepath.Base(path)
 	data = GetData(filename, cnt, topN, int64(sizeFilter))
@@ -51,8 +51,8 @@ func ToCliWriter(cli *cli.Context) {
 		fmt.Fprintln(cli.App.ErrWriter, " requires at least 1 argument")
 		return
 	}
-	topN := 100      // top N bigkey (按内存),最大500
-	sizeFilter := 0  // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
+	topN := 100     // top N bigkey (按内存),最大500
+	sizeFilter := 0 // GetLargestEntries 过滤掉小于阈值的key，传0表示不过滤
 
 	// parse rdb file
 	fmt.Fprintln(cli.App.Writer, "[")
@@ -61,7 +61,7 @@ func ToCliWriter(cli *cli.Context) {
 		file := cli.Args().Get(i)
 		rdbDecoder := decoder.NewDecoder()
 		go Decode(cli, rdbDecoder, file)
-		cnt := NewCounter()
+		cnt := NewCounter(NewCounterConfig())
 		cnt.Count(rdbDecoder.Entries)
 		filename := filepath.Base(file)
 		data := GetData(filename, cnt, topN, int64(sizeFilter))
@@ -85,17 +85,38 @@ func ToCliWriterToFile(cli *cli.Context) {
 		return
 	}
 
-    // top N bigkey (按内存), 最大500
+	// top N bigkey (按内存)
 	topN := cli.Int("num")
-    if topN > 500 {
-		fmt.Fprintln(cli.App.ErrWriter, " Please pass a number less than 500!")
-		return
-	}
 	// 将带单位的字符串转换为字节数, GetLargestEntries 过滤掉小于阈值sizeFilter的key，传0表示不过滤
 	sizeFilter, err := ParseUnitToBytes(cli.String("size"))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
+	}
+
+	// Store all prefixes
+	storeAllPrefixes := cli.Bool("store-all-prefixes")
+
+	// Separators
+	separators := cli.String("separators")
+
+	// Top prefixes
+	topPrefixs := cli.Int("top-prefixs")
+
+	// Prefix shrink
+	prefixShrink := cli.Int("prefix-shrink")
+
+	// Prefix capacity
+	prefixCapacity := cli.Int("prefix-capacity")
+
+	// Counter config
+	counterConfig := &CounterConfig{
+		StoreAllPrefixes:        storeAllPrefixes,
+		Separators:              separators,
+		TopPrefixNum:            topPrefixs,
+		TopKeyNum:               topN,
+		PrefixPreShrinkNum:      prefixShrink,
+		PrefixContainerCapacity: prefixCapacity,
 	}
 
 	cst := time.FixedZone("CST", 8*60*60)
@@ -126,7 +147,7 @@ func ToCliWriterToFile(cli *cli.Context) {
 		rdb_file := cli.Args().Get(i)
 		rdbDecoder := decoder.NewDecoder()
 		go Decode(cli, rdbDecoder, rdb_file)
-		cnt := NewCounter()
+		cnt := NewCounter(counterConfig)
 		cnt.Count(rdbDecoder.Entries)
 		filename := filepath.Base(rdb_file)
 		data := GetData(filename, cnt, topN, sizeFilter)
