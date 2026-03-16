@@ -74,7 +74,7 @@ type Counter struct {
 // Count by various dimensions，show.go NewCounter 后，调用此方法，遍历decoder的entry, <-chan表示一个只能接收数据的单向通道
 func (c *Counter) Count(in <-chan *decoder.Entry) {
 	for e := range in {
-		c.count(e)
+		c.count(e)   //调下面的count方法（串行分析）
 	}
 	// get largest prefixes
 	c.calcuLargestKeyPrefix(1000)

@@ -8,7 +8,7 @@
 
 RDR (redis data Reveal) is a tool for offline analysis of redis rdb files. Through it, you can quickly discover bigkeys, help you grasp the occupation and distribution of keys in memory, learn which keys are growing infinitely (through key expiration time or quantity). It provides data support for your optimization operations and helps you avoid problems such as insufficient memory and performance degradation caused by key skew.
 
-RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具。通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布情况、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题。
+RDR(redis data Reveal)是一个用于离线分析 redis rdb 文件的工具。通过它，可以快速发现实例中的bigkey，帮助您掌握Key在内存中的占用和分布情况、得知哪些key在无限增长等。能为您的优化操作提供数据支持，帮助您避免因Key倾斜（导致集群内存分布不均）引发的内存不足、性能下降等问题发生。
 
  功能：
   - 统计信息展示（command:show）：以网页形式展示RDB文件的统计报告（例如 Top 300 大Key列表、key名前缀统计分析等）。
@@ -71,7 +71,7 @@ redis rdb版本：
 	 
    - v1.0.3 
      - 升级chartjs版本，实现图表tip时，显示更人性化的数字【2025-11-13】
-     - 将2021年3月 至 2023年7月，在原项目 [xueqiu/rdr](github.com/xueqiu/rdr/pulls) 的pulls，均已同步过来、并解决完毕。
+     - 将2021年3月 至 2023年7月，原项目 [xueqiu/rdr](github.com/xueqiu/rdr/pulls) 的pulls，同步过来、并解决完毕。
 	 
    - v1.0.5 
      - 完成redis7+支持，主要解决了redis7.x底层存储类型使用listpack替代ziplist的解析问题。
@@ -126,7 +126,7 @@ OPTIONS:
 4.运行
 # GOGC=200 ./rdr-linux show -p 8099 *.rdb
 注意,如果你的rdb文件比较大（1G+）,建议一次只分析一个rdb文件
-    如果rdb文件大，那么cpu使用率就会过高，此时我们调整GOGC，默认100，提高值(200-400)可降低GC频率，减少CPU占用但会增加内存使用
+    如果rdb文件大，那么cpu使用率就会过高，此时我们调整GOGC，默认100，提高值(200-400)可降低GC频率，减少CPU占用但会增加峰值内存使用
 
 5.防火墙端口放行
      For Ubuntu\Debian：sudo ufw allow 8099/tcp  &&  sudo ufw reload
@@ -289,7 +289,7 @@ A: 从v1.0.9版本起，将所有所属的db都进行了显示，多个时以逗
 
 ## 贡献
 
-欢迎来自开源社区的贡献。对于重大变更，请先开一个 issue 来讨论你想要改变的内容。如果想共同维护此项目，请加我微信（Sd-LiYanJing）。
+欢迎来自开源社区的贡献。对于重大变更，请先开一个 issue 来讨论你想要改变的内容，可以加我微信（Sd-LiYanJing）入群讨论。
 
 特别感兴趣的是：
 
@@ -305,7 +305,7 @@ A: 从v1.0.9版本起，将所有所属的db都进行了显示，多个时以逗
 
 对本项目参考的开源项目和资料，再次表示感谢，感谢大家对开源社区的贡献！ 
 
-感谢您Star，感谢诸位兄弟/姐妹对此项目的支持，欢迎开发者加入！
+感谢您Star，感谢诸位兄弟/姐妹对此项目的支持。个人维护精力有限，欢迎Pr或加入项目组，一起维护！
 
 
 ## License
