@@ -31,9 +31,8 @@ func TestGetLargestKeyPrefixes(t *testing.T) {
 		LenOfLargestElem:   1,
 		FieldOfLargestElem: "test",
 		Db:                 0,
-
 	}
-	c := NewCounter()
+	c := NewCounter(NewCounterConfig())
 	c.countByKeyPrefix(e)
 	c.calcuLargestKeyPrefix(1)
 	for _, p := range c.GetLargestKeyPrefixes() {

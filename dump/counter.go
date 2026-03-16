@@ -23,8 +23,49 @@ import (
 	"github.com/919927181/rdr/decoder"
 )
 
+const (
+	DefaultSeparators = ":;,_- "
+	DefaultTopKeyNum  = 500
+
+	// 大约 99% 的key前缀为低频
+	DefaultStoreAllPrefixes        = false
+	DefaultTopPrefixNum            = 500
+	DefaultPrefixPreShrinkNum      = 5000
+	DefaultPrefixContainerCapacity = 50000
+)
+
+type CounterConfig struct {
+	// 分隔符，默认 ":;,_- "
+	Separators string
+	// 仅在内存足够时开启，默认关闭
+	StoreAllPrefixes bool
+	// Bigkey数量阈值，默认 500
+	TopKeyNum int
+	// 前缀数量阈值，默认 500
+	TopPrefixNum int
+	// 前缀容器容量
+	PrefixContainerCapacity int
+	// 前缀预缩容数量
+	PrefixPreShrinkNum int
+}
+
+// 默认配置
+func NewCounterConfig() *CounterConfig {
+	return &CounterConfig{
+		Separators:              DefaultSeparators,
+		StoreAllPrefixes:        DefaultStoreAllPrefixes,
+		TopKeyNum:               DefaultTopKeyNum,
+		TopPrefixNum:            DefaultTopPrefixNum,
+		PrefixContainerCapacity: DefaultPrefixContainerCapacity,
+		PrefixPreShrinkNum:      DefaultPrefixPreShrinkNum,
+	}
+}
+
 // NewCounter return a pointer of Counter
-func NewCounter() *Counter {
+func NewCounter(config *CounterConfig) *Counter {
+	if config == nil {
+		config = NewCounterConfig()
+	}
 	h := &entryHeap{}
 	heap.Init(h)
 	p := &prefixHeap{}
@@ -43,10 +84,10 @@ func NewCounter() *Counter {
 		keyPrefixNum:       map[typeKey]uint64{},
 		typeBytes:          map[string]uint64{},
 		typeNum:            map[string]uint64{},
-		separators:         ":;,_- ",
 		slotBytes:          map[int]uint64{},
 		slotNum:            map[int]uint64{},
 		keyPrefixDb:        map[typeKey]string{},
+		config:             config,
 	}
 }
 
@@ -63,12 +104,12 @@ type Counter struct {
 	lengthLevelNum     map[typeKey]uint64
 	keyPrefixBytes     map[typeKey]uint64
 	keyPrefixNum       map[typeKey]uint64
-	separators         string
 	typeBytes          map[string]uint64
 	typeNum            map[string]uint64
 	slotBytes          map[int]uint64
 	slotNum            map[int]uint64
 	keyPrefixDb        map[typeKey]string
+	config             *CounterConfig
 }
 
 // Count by various dimensions，show.go NewCounter 后，调用此方法，遍历decoder的entry, <-chan表示一个只能接收数据的单向通道
@@ -77,7 +118,7 @@ func (c *Counter) Count(in <-chan *decoder.Entry) {
 		c.count(e)
 	}
 	// get largest prefixes
-	c.calcuLargestKeyPrefix(1000)
+	c.calcuLargestKeyPrefix(c.config.TopPrefixNum)
 }
 
 // 传入一个entry，执行各指标的count方法
@@ -90,7 +131,7 @@ func (c *Counter) count(e *decoder.Entry) {
 	//c.countByDb(e) //该方法由caiqing0204添加
 }
 
-//该方法由caiqing0204添加，没有看到哪儿用到，这里会导致前缀所属db不正确
+// 该方法由caiqing0204添加，没有看到哪儿用到，这里会导致前缀所属db不正确
 func (c *Counter) countByDb(e *decoder.Entry) {
 	key := typeKey{
 		Type: e.Type,
@@ -108,10 +149,10 @@ func (c *Counter) GetLargestEntries(num int, sizeFilter int64) []*decoder.Entry 
 		entries := *c.largestEntries
 		// 阈值默认为0，当大于0时，将过滤掉小于阈值的key
 		if sizeFilter > 0 {
-			if  entries[i].Bytes > uint64(sizeFilter) {
+			if entries[i].Bytes > uint64(sizeFilter) {
 				res = append(res, entries[i])
 			}
-		}else {
+		} else {
 			res = append(res, entries[i])
 		}
 	}
@@ -151,7 +192,6 @@ func (c *Counter) GetLenLevelCount() []*PrefixEntry {
 	}
 	return res
 }
-
 
 func (c *Counter) countLargestEntries(e *decoder.Entry, num int) {
 	heap.Push(c.largestEntries, e)
@@ -206,9 +246,8 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 		return c
 	}, e.Key)
 
-
-    // 将key名字进行分割，得到所有前缀
-	prefixes := getPrefixes(k, c.separators)
+	// 将key名字进行分割，得到所有前缀
+	prefixes := getPrefixes(k, c.config.Separators)
 	key := typeKey{
 		Type: e.Type,
 	}
@@ -220,14 +259,18 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 		key.Key = prefix
 		c.keyPrefixBytes[key] += e.Bytes
 		c.keyPrefixNum[key]++
-		 //2025-12-25 liyanjing add 如果不同db里有相同前缀的key，那么设置属于任何一个db都不合适
-		if c.keyPrefixDb[key] =="" {
+		//2025-12-25 liyanjing add 如果不同db里有相同前缀的key，那么设置属于任何一个db都不合适
+		if c.keyPrefixDb[key] == "" {
 			c.keyPrefixDb[key] = strconv.Itoa(e.Db)
-		}else {
+		} else {
 			if !strings.Contains(c.keyPrefixDb[key], strconv.Itoa(e.Db)) {
-				c.keyPrefixDb[key] += ","+strconv.Itoa(e.Db)
+				c.keyPrefixDb[key] += "," + strconv.Itoa(e.Db)
 			}
 		}
+	}
+	// 如果不开存储所有前缀，并且前缀数量超过容器容量，则进行缩容
+	if !c.config.StoreAllPrefixes && len(c.keyPrefixBytes) > c.config.PrefixContainerCapacity {
+		c.calcuLargestKeyPrefix(c.config.PrefixPreShrinkNum)
 	}
 }
 
@@ -240,6 +283,8 @@ func (c *Counter) countBySlot(e *decoder.Entry) {
 }
 
 func (c *Counter) calcuLargestKeyPrefix(num int) {
+	tempPrefixes := &prefixHeap{}
+	heap.Init(tempPrefixes)
 	for key := range c.keyPrefixBytes {
 		k := &PrefixEntry{}
 		k.Type = key.Type
@@ -250,12 +295,20 @@ func (c *Counter) calcuLargestKeyPrefix(num int) {
 		delete(c.keyPrefixBytes, key)
 		delete(c.keyPrefixNum, key)
 
-		heap.Push(c.largestKeyPrefixes, k)
-		l := c.largestKeyPrefixes.Len()
+		heap.Push(tempPrefixes, k)
+		l := tempPrefixes.Len()
 		if l > num {
-			heap.Pop(c.largestKeyPrefixes)
+			heap.Pop(tempPrefixes)
 		}
 	}
+	for i := 0; i < tempPrefixes.Len(); i++ {
+		entries := *tempPrefixes
+
+		// save
+		c.keyPrefixBytes[entries[i].typeKey] = entries[i].Bytes
+		c.keyPrefixNum[entries[i].typeKey] = entries[i].Num
+	}
+	c.largestKeyPrefixes = tempPrefixes
 }
 
 type entryHeap []*decoder.Entry
@@ -294,7 +347,7 @@ type PrefixEntry struct {
 	typeKey
 	Bytes uint64
 	Num   uint64
-	Db    string  //之前为int
+	Db    string //之前为int
 }
 
 func (h prefixHeap) Len() int {

@@ -27,7 +27,6 @@ import (
 //go:generate go-bindata -prefix "static/" -o=static/static.go -pkg=static -ignore static.go static/...
 //go:generate go-bindata -prefix "views/" -o=views/views.go -pkg=views -ignore views.go views/...
 
-
 func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
@@ -57,8 +56,32 @@ func main() {
 					Value: "0kb",
 					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
 				},
+				cli.BoolFlag{
+					Name:  "store-all-prefixes, spa",
+					Usage: " store all key prefixes, default is false",
+				},
+				cli.StringFlag{
+					Name:  "separators, sep",
+					Value: ":;,_- ",
+					Usage: " separators for key prefixes, default is :;,_- ",
+				},
+				cli.IntFlag{
+					Name:  "top-prefixs, tpn",
+					Value: 500,
+					Usage: " top N key prefixes, default is 500",
+				},
+				cli.IntFlag{
+					Name:  "prefix-shrink, psn",
+					Value: 5000,
+					Usage: " prefix shrink num, default is 5000",
+				},
+				cli.IntFlag{
+					Name:  "prefix-capacity, pc",
+					Value: 50000,
+					Usage: " prefix container capacity, default is 50000",
+				},
 			},
-			Action:    dump.ToCliWriterToFile,
+			Action: dump.ToCliWriterToFile,
 		},
 		{
 			Name:      "show",
@@ -79,6 +102,30 @@ func main() {
 					Name:  "size, s",
 					Value: "0kb",
 					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
+				},
+				cli.BoolFlag{
+					Name:  "store-all-prefixes, spa",
+					Usage: " store all key prefixes, default is false",
+				},
+				cli.StringFlag{
+					Name:  "separators, sep",
+					Value: ":;,_- ",
+					Usage: " separators for key prefixes, default is :;,_- ",
+				},
+				cli.IntFlag{
+					Name:  "top-prefixs, tpn",
+					Value: 500,
+					Usage: " top N key prefixes, default is 500",
+				},
+				cli.IntFlag{
+					Name:  "prefix-shrink, psn",
+					Value: 5000,
+					Usage: " prefix shrink num, default is 5000",
+				},
+				cli.IntFlag{
+					Name:  "prefix-capacity, pc",
+					Value: 50000,
+					Usage: " prefix container capacity, default is 50000",
 				},
 			},
 			Action: dump.Show,

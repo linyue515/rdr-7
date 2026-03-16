@@ -53,17 +53,37 @@ func Show(c *cli.Context) {
 		return
 	}
 
-	// top N bigkey (按内存), 最大500
+	// top N bigkey (按内存)
 	topN := c.Int("num")
-	if topN > 500 {
-		fmt.Fprintln(c.App.Writer, " Please pass a number less than 500!")
-		return
-	}
 	// 将带单位的字符串转换为字节数, GetLargestEntries 过滤掉小于阈值sizeFilter的key，传0表示不过滤
 	sizeFilter, err := ParseUnitToBytes(c.String("size"))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
+	}
+	// Store all prefixes
+	storeAllPrefixes := c.Bool("store-all-prefixes")
+
+	// Separators
+	separators := c.String("separators")
+
+	// Top prefixes
+	topPrefixs := c.Int("top-prefixs")
+
+	// Prefix shrink
+	prefixShrink := c.Int("prefix-shrink")
+
+	// Prefix capacity
+	prefixCapacity := c.Int("prefix-capacity")
+
+	// Counter config
+	counterConfig := &CounterConfig{
+		StoreAllPrefixes:        storeAllPrefixes,
+		Separators:              separators,
+		TopPrefixNum:            topPrefixs,
+		TopKeyNum:               topN,
+		PrefixPreShrinkNum:      prefixShrink,
+		PrefixContainerCapacity: prefixCapacity,
 	}
 
 	// parse rdbfile
@@ -82,7 +102,7 @@ func Show(c *cli.Context) {
 						start_milliseconds := time.Now().UnixMilli()
 						fmt.Fprintf(c.App.Writer, "start to parse %v \n", filename)
 						go Decode(c, decoder, v)
-						counter := NewCounter()
+						counter := NewCounter(counterConfig)
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)
 						end_milliseconds := time.Now().UnixMilli()
@@ -92,7 +112,7 @@ func Show(c *cli.Context) {
 						// init common data in template
 						tplCommonData["Instances"] = instances
 						tplCommonData["TopN"] = strconv.Itoa(topN)
-						tplCommonData["sizeFilter"] = strconv.FormatInt(sizeFilter,10)
+						tplCommonData["sizeFilter"] = strconv.FormatInt(sizeFilter, 10)
 					}
 				}
 
