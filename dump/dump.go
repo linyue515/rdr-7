@@ -94,29 +94,29 @@ func ToCliWriterToFile(cli *cli.Context) {
 		return
 	}
 
-	// Store all prefixes
-	storeAllPrefixes := cli.Bool("store-all-prefixes")
-
 	// Separators
 	separators := cli.String("separators")
 
+	// Store all prefixes
+	storeAllPrefixes := cli.Bool("store-all-prefixes")
+
 	// Top prefixes
-	topPrefixs := cli.Int("top-prefixs")
+	topPrefixN := cli.Int("top-prefix")
 
 	// Prefix shrink
 	prefixShrink := cli.Int("prefix-shrink")
 
 	// Prefix capacity
-	prefixCapacity := cli.Int("prefix-capacity")
+	prefixMaxCapacity := cli.Int("prefix-max-capacity")
 
 	// Counter config
 	counterConfig := &CounterConfig{
+		TopBigKeyNum:            topN,
 		StoreAllPrefixes:        storeAllPrefixes,
 		Separators:              separators,
-		TopPrefixNum:            topPrefixs,
-		TopKeyNum:               topN,
+		TopPrefixNum:            topPrefixN,
 		PrefixPreShrinkNum:      prefixShrink,
-		PrefixContainerCapacity: prefixCapacity,
+		PrefixContainerMaxCapacity: prefixMaxCapacity,
 	}
 
 	cst := time.FixedZone("CST", 8*60*60)

@@ -23,41 +23,44 @@ import (
 	"github.com/919927181/rdr/decoder"
 )
 
+// v1.1.4 add
 const (
-	DefaultSeparators = ":;,_- "
-	DefaultTopKeyNum  = 500
 
-	// 大约 99% 的key前缀为低频
+	DefaultTopBigKeyNum  = 500
+	DefaultSeparators = ":;,_- "
 	DefaultStoreAllPrefixes        = false
 	DefaultTopPrefixNum            = 500
 	DefaultPrefixPreShrinkNum      = 5000
-	DefaultPrefixContainerCapacity = 50000
+	DefaultPrefixContainerMaxCapacity = 50000
 )
-
+// v1.1.4 add
 type CounterConfig struct {
-	// 分隔符，默认 ":;,_- "
-	Separators string
-	// 仅在内存足够时开启，默认关闭
-	StoreAllPrefixes bool
+
 	// Bigkey数量阈值，默认 500
-	TopKeyNum int
+	TopBigKeyNum int
+
+	// key前缀分隔符，默认 ":;,_- "
+	Separators string
+	// 是否存储所有前缀，仅当你的主机内存足够时开启，默认关闭
+	// false时，对前缀的存储量进行动态收缩, 前缀个数越多，创建的对象也就越多，从而耗内存就越多,就会因内存不足执行不完, 详见 https://github.com/919927181/rdr/issues/1
+	StoreAllPrefixes bool
 	// 前缀数量阈值，默认 500
 	TopPrefixNum int
-	// 前缀容器容量
-	PrefixContainerCapacity int
-	// 前缀预缩容数量
+	// 前缀容器的最大容量，默认值为前缀数量阈值的10倍，可以理解为最大水位线，到达最大水位线，就要去排出一部分水
+	PrefixContainerMaxCapacity int
+	// 前缀容器的预缩容数量，可以理解为正常水位线
 	PrefixPreShrinkNum int
 }
 
-// 默认配置
+// 默认配置, v1.1.4 add
 func NewCounterConfig() *CounterConfig {
 	return &CounterConfig{
-		Separators:              DefaultSeparators,
-		StoreAllPrefixes:        DefaultStoreAllPrefixes,
-		TopKeyNum:               DefaultTopKeyNum,
-		TopPrefixNum:            DefaultTopPrefixNum,
-		PrefixContainerCapacity: DefaultPrefixContainerCapacity,
-		PrefixPreShrinkNum:      DefaultPrefixPreShrinkNum,
+		TopBigKeyNum:                DefaultTopBigKeyNum,
+		Separators:                  DefaultSeparators,
+		StoreAllPrefixes:            DefaultStoreAllPrefixes,
+		TopPrefixNum:                DefaultTopPrefixNum,
+		PrefixContainerMaxCapacity:  DefaultPrefixContainerMaxCapacity,
+		PrefixPreShrinkNum:          DefaultPrefixPreShrinkNum,
 	}
 }
 
@@ -238,6 +241,7 @@ func (c *Counter) countByType(e *decoder.Entry) {
 
 // 传入一个entry，根据key名，通过分隔符得到前缀，然后对各前缀进行计数
 func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
+
 	// reset all numbers to 0 将key名字中的所有数字（通常为id号）都置为0
 	k := strings.Map(func(c rune) rune {
 		if c >= 48 && c <= 57 { //48 == "0" 57 == "9"
@@ -246,17 +250,17 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 		return c
 	}, e.Key)
 
-	// 将key名字进行分割，得到所有前缀
+	// 1.将key名字进行分割，得到所有前缀字符串
 	prefixes := getPrefixes(k, c.config.Separators)
 	key := typeKey{
 		Type: e.Type,
 	}
-	//遍历前缀，对其计数
-	for _, prefix := range prefixes {
-		if len(prefix) == 0 {
+	// 2.遍历前缀，对其计数
+	for _, prefixStr := range prefixes {
+		if len(prefixStr) == 0 {
 			continue
 		}
-		key.Key = prefix
+		key.Key = prefixStr
 		c.keyPrefixBytes[key] += e.Bytes
 		c.keyPrefixNum[key]++
 		//2025-12-25 liyanjing add 如果不同db里有相同前缀的key，那么设置属于任何一个db都不合适
@@ -268,8 +272,8 @@ func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 			}
 		}
 	}
-	// 如果不开存储所有前缀，并且前缀数量超过容器容量，则进行缩容
-	if !c.config.StoreAllPrefixes && len(c.keyPrefixBytes) > c.config.PrefixContainerCapacity {
+	// 3.如果不开存储所有前缀，并且前缀数量（也可以用 c.keyPrefixNum[key]）超过容器的最大容量时，则进行缩容
+	if !c.config.StoreAllPrefixes && len(c.keyPrefixBytes) > c.config.PrefixContainerMaxCapacity {
 		c.calcuLargestKeyPrefix(c.config.PrefixPreShrinkNum)
 	}
 }
@@ -282,6 +286,7 @@ func (c *Counter) countBySlot(e *decoder.Entry) {
 	}
 }
 
+// 找出 top num 前缀
 func (c *Counter) calcuLargestKeyPrefix(num int) {
 	tempPrefixes := &prefixHeap{}
 	heap.Init(tempPrefixes)
@@ -303,7 +308,6 @@ func (c *Counter) calcuLargestKeyPrefix(num int) {
 	}
 	for i := 0; i < tempPrefixes.Len(); i++ {
 		entries := *tempPrefixes
-
 		// save
 		c.keyPrefixBytes[entries[i].typeKey] = entries[i].Bytes
 		c.keyPrefixNum[entries[i].typeKey] = entries[i].Num

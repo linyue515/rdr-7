@@ -61,29 +61,29 @@ func Show(c *cli.Context) {
 		fmt.Println("Error:", err)
 		return
 	}
-	// Store all prefixes
-	storeAllPrefixes := c.Bool("store-all-prefixes")
-
 	// Separators
 	separators := c.String("separators")
 
+	// Store all prefixes
+	storeAllPrefixes := c.Bool("store-all-prefixes")
+
 	// Top prefixes
-	topPrefixs := c.Int("top-prefixs")
+	topPrefixN := c.Int("top-prefix")
 
 	// Prefix shrink
 	prefixShrink := c.Int("prefix-shrink")
 
 	// Prefix capacity
-	prefixCapacity := c.Int("prefix-capacity")
+	prefixMaxCapacity := c.Int("prefix-max-capacity")
 
 	// Counter config
 	counterConfig := &CounterConfig{
-		StoreAllPrefixes:        storeAllPrefixes,
+		TopBigKeyNum:            topN,
 		Separators:              separators,
-		TopPrefixNum:            topPrefixs,
-		TopKeyNum:               topN,
+		StoreAllPrefixes:        storeAllPrefixes,
+		TopPrefixNum:            topPrefixN,
 		PrefixPreShrinkNum:      prefixShrink,
-		PrefixContainerCapacity: prefixCapacity,
+		PrefixContainerMaxCapacity: prefixMaxCapacity,
 	}
 
 	// parse rdbfile

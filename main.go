@@ -31,7 +31,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "rdr"
 	app.Usage = "a tool to parse redis rdb file"
-	app.Version = "v1.1.3"
+	app.Version = "v1.1.4"
 	app.Writer = os.Stdout
 	app.ErrWriter = os.Stderr
 	app.Commands = []cli.Command{
@@ -56,17 +56,17 @@ func main() {
 					Value: "0kb",
 					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
 				},
-				cli.BoolFlag{
-					Name:  "store-all-prefixes, spa",
-					Usage: " store all key prefixes, default is false",
-				},
 				cli.StringFlag{
 					Name:  "separators, sep",
 					Value: ":;,_- ",
 					Usage: " separators for key prefixes, default is :;,_- ",
 				},
+				cli.BoolFlag{
+					Name:  "store-all-prefixes, spa",
+					Usage: " store all key prefixes, default is false",
+				},
 				cli.IntFlag{
-					Name:  "top-prefixs, tpn",
+					Name:  "top-prefix, pn",
 					Value: 500,
 					Usage: " top N key prefixes, default is 500",
 				},
@@ -76,9 +76,9 @@ func main() {
 					Usage: " prefix shrink num, default is 5000",
 				},
 				cli.IntFlag{
-					Name:  "prefix-capacity, pc",
+					Name:  "prefix-max-capacity, pmn",
 					Value: 50000,
-					Usage: " prefix container capacity, default is 50000",
+					Usage: " prefix container max capacity, default is 50000",
 				},
 			},
 			Action: dump.ToCliWriterToFile,
@@ -103,17 +103,17 @@ func main() {
 					Value: "0kb",
 					Usage: " when GetLargestEntries, keys smaller than the threshold are filtered. supported units is B/KB/MB/GB, and can be lowercase",
 				},
-				cli.BoolFlag{
-					Name:  "store-all-prefixes, spa",
-					Usage: " store all key prefixes, default is false",
-				},
 				cli.StringFlag{
 					Name:  "separators, sep",
 					Value: ":;,_- ",
 					Usage: " separators for key prefixes, default is :;,_- ",
 				},
+				cli.BoolFlag{
+					Name:  "store-all-prefixes, spa",
+					Usage: " store all key prefixes, default is false",
+				},
 				cli.IntFlag{
-					Name:  "top-prefixs, tpn",
+					Name:  "top-prefix, pn",
 					Value: 500,
 					Usage: " top N key prefixes, default is 500",
 				},
@@ -123,9 +123,9 @@ func main() {
 					Usage: " prefix shrink num, default is 5000",
 				},
 				cli.IntFlag{
-					Name:  "prefix-capacity, pc",
+					Name:  "prefix-max-capacity, pmn",
 					Value: 50000,
-					Usage: " prefix container capacity, default is 50000",
+					Usage: " prefix container max capacity, default is 50000",
 				},
 			},
 			Action: dump.Show,
