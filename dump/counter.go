@@ -34,17 +34,17 @@ const (
 	DefaultPrefixPreShrinkNum      = 5000
 	DefaultPrefixContainerMaxCapacity = 50000
 
-    //过期剩余时间分析
+    // 过期剩余时间分析
+	ExpireStat_0_Str          = "不过期"
+	ExpireStat_1_Str          = "已过期"
 	ExpireStat_0_1h_Str       = "0~1h"
-	ExpireStat_1_3h_Str       = "0~3h"
+	ExpireStat_1_3h_Str       = "1~3h"
 	ExpireStat_3_12h_Str      = "3~12h"
 	ExpireStat_12_24h_Str     = "12~24h"
 	ExpireStat_1_3d_Str       = "1~3d"
 	ExpireStat_3_7d_Str       = "3~7d"
 	ExpireStat_7d_Str         = ">7d"
-	ExpireStat_0_Str          = "永不过期"
-	ExpireStat_1_Str          = "已过期"
-
+    // rdb创建时间
 	DefaultAux_Ctime = 0
 
 )

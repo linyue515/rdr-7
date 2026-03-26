@@ -106,12 +106,17 @@ func Show(c *cli.Context) {
                         // rdb 解析，会先读基础信息（如rdb版本，aux元属性），然后再去解析key，它是异步解析的，因此这里先等下，等到读出rdb创建时间aux_ctime，再去执行count
 						for {
 							if  decoder.GetTimestamp() !=0 {
-							  break
+								break
 							}
 							time.Sleep(200 * time.Millisecond) //暂停200毫秒
 						}
 						counterConfig.Aux_Ctime=decoder.GetTimestamp()
 						counter := NewCounter(counterConfig)
+						// 在这里给key过期时间分析初始化，而不是在Counter创建对象时，原因是为了保存顺序
+						for _, t := range []string{"不过期", "已过期", "0~1h", "0~3h", "3~12h", "12~24h", "1~3d", "3~7d", ">7d"} {
+							counter.expireStatBytes[t] = 0
+							counter.expireStatNum[t] = 0
+						}
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)
 						end_milliseconds := time.Now().UnixMilli()
