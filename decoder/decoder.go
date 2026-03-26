@@ -43,8 +43,8 @@ type Decoder struct {
 	Entries chan *Entry
 	m       MemProfiler
 
-	usedMem int64
-	ctime   int64
+	aux_usedMem int64
+	aux_ctime   int64
 	//count   int
 	rdbVer int //rdb file version
 	Db     int
@@ -69,11 +69,11 @@ func (d *Decoder) sendEntry() {
 }
 
 func (d *Decoder) GetTimestamp() int64 {
-	return d.ctime
+	return d.aux_ctime
 }
 
 func (d *Decoder) GetUsedMem() int64 {
-	return d.usedMem
+	return d.aux_usedMem
 }
 
 func (d *Decoder) StartRDB(ver int) {
@@ -92,7 +92,7 @@ func (d *Decoder) Aux(key, value []byte) {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "ParseInt(", string(value), "):", err)
 			}
-			d.ctime = n
+			d.aux_ctime = n
 		}
 
 	case "used-mem":
@@ -101,7 +101,7 @@ func (d *Decoder) Aux(key, value []byte) {
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "ParseInt(", string(value), "):", err)
 			}
-			d.usedMem = n
+			d.aux_usedMem = n
 		}
 
 	}

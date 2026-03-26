@@ -19,6 +19,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/919927181/rdr/decoder"
 )
@@ -32,6 +33,20 @@ const (
 	DefaultTopPrefixNum            = 500
 	DefaultPrefixPreShrinkNum      = 5000
 	DefaultPrefixContainerMaxCapacity = 50000
+
+    //过期剩余时间分析
+	ExpireStat_0_1h_Str       = "0~1h"
+	ExpireStat_1_3h_Str       = "0~3h"
+	ExpireStat_3_12h_Str      = "3~12h"
+	ExpireStat_12_24h_Str     = "12~24h"
+	ExpireStat_1_3d_Str       = "1~3d"
+	ExpireStat_3_7d_Str       = "3~7d"
+	ExpireStat_7d_Str         = ">7d"
+	ExpireStat_0_Str          = "永不过期"
+	ExpireStat_1_Str          = "已过期"
+
+	DefaultAux_Ctime = 0
+
 )
 // v1.1.4 add
 type CounterConfig struct {
@@ -50,6 +65,9 @@ type CounterConfig struct {
 	PrefixContainerMaxCapacity int
 	// 前缀容器的预缩容数量，可以理解为正常水位线
 	PrefixPreShrinkNum int
+
+	// rdb的创建时间，用于过期剩余时间分析
+	Aux_Ctime int64
 }
 
 // 默认配置, v1.1.4 add
@@ -61,6 +79,7 @@ func NewCounterConfig() *CounterConfig {
 		TopPrefixNum:                DefaultTopPrefixNum,
 		PrefixContainerMaxCapacity:  DefaultPrefixContainerMaxCapacity,
 		PrefixPreShrinkNum:          DefaultPrefixPreShrinkNum,
+		Aux_Ctime:                   DefaultAux_Ctime,
 	}
 }
 
@@ -89,6 +108,8 @@ func NewCounter(config *CounterConfig) *Counter {
 		typeNum:            map[string]uint64{},
 		slotBytes:          map[int]uint64{},
 		slotNum:            map[int]uint64{},
+		expireStatBytes:    map[string]uint64{},
+		expireStatNum:      map[string]uint64{},
 		keyPrefixDb:        map[typeKey]string{},
 		config:             config,
 	}
@@ -111,6 +132,8 @@ type Counter struct {
 	typeNum            map[string]uint64
 	slotBytes          map[int]uint64
 	slotNum            map[int]uint64
+	expireStatBytes    map[string]uint64
+	expireStatNum      map[string]uint64
 	keyPrefixDb        map[typeKey]string
 	config             *CounterConfig
 }
@@ -132,6 +155,8 @@ func (c *Counter) count(e *decoder.Entry) {
 	c.countByKeyPrefix(e)
 	c.countBySlot(e)
 	//c.countByDb(e) //该方法由caiqing0204添加
+	c.countByExpire(e)
+
 }
 
 // 该方法由caiqing0204添加，没有看到哪儿用到，这里会导致前缀所属db不正确
@@ -239,6 +264,41 @@ func (c *Counter) countByType(e *decoder.Entry) {
 	c.typeBytes[e.Type] += e.Bytes
 }
 
+// 过期剩余时间分析，v1.1.5 add
+func (c *Counter) countByExpire(e *decoder.Entry) {
+
+    if e.Expiration >0 {
+		// rdb的创建时间，是秒间戳，key的过期时间是毫秒时间戳
+		// 转换成时间对象后，计算两个时间的差值
+		diff := time.Unix(0, e.Expiration*int64(time.Millisecond)).Sub(time.Unix(c.config.Aux_Ctime, 0))
+		// 将差值转换为小时数
+		h := diff.Hours();
+		expireStatStr := ""
+		switch  {
+        case h < 0:
+			expireStatStr = ExpireStat_1_Str
+        case h > 0 && h <= 1:
+			expireStatStr = ExpireStat_0_1h_Str
+		case h > 1 && h <= 3:
+			expireStatStr = ExpireStat_1_3h_Str
+		case h > 3 && h <= 12:
+			expireStatStr = ExpireStat_3_12h_Str
+		case h > 12 && h <= 24:
+			expireStatStr = ExpireStat_12_24h_Str
+		case h > 24 && h <= 24*3:
+			expireStatStr = ExpireStat_1_3d_Str
+		case h > 24*3 && h <= 24*7:
+			expireStatStr = ExpireStat_3_7d_Str
+		case h > 24*7:
+			expireStatStr = ExpireStat_7d_Str
+		}
+		c.expireStatNum[expireStatStr]++
+		c.expireStatBytes[expireStatStr] += e.Bytes
+    } else {
+		c.expireStatNum[ExpireStat_0_Str]++
+		c.expireStatBytes[ExpireStat_0_Str] += e.Bytes
+	}
+}
 // 传入一个entry，根据key名，通过分隔符得到前缀，然后对各前缀进行计数
 func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 

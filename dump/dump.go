@@ -253,5 +253,8 @@ func GetData(filename string, cnt *Counter, topN int, sizeFilter int64) map[stri
 	data["SlotBytes"] = slotBytes
 	data["SlotNums"] = slotNums
 
+	data["ExpireStatBytes"] = cnt.expireStatBytes
+	data["ExpireStatNum"] = cnt.expireStatNum
+
 	return data
 }

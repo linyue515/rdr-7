@@ -209,11 +209,26 @@
             var barCtx1 = document.getElementById("bar1-aera-" + typ).getContext("2d");
             window["myBra1" + typ] = new Chart(barCtx1, barConfig1);
         }
+
+        //以下是key过期时间的柱状图
+        {{range $k, $v := .ExpireStatNum}}
+            expired_barConfig2.data.datasets[0].data.push({{$v}});
+            expired_barConfig1.data.datasets[0].data.push({{index $.ExpireStatBytes $k}});
+            expired_barConfig2.data.labels.push({{$k}});
+            expired_barConfig1.data.labels.push({{$k}});
+        {{end}}
+
+        var expired_bar_Ctx1 = document.getElementById("chart-bar-expir-1").getContext("2d");
+        window.my_expired_bar1 = new Chart(expired_bar_Ctx1, expired_barConfig1);
+        var expired_bar_Ctx2 = document.getElementById("chart-bar-expir-2").getContext("2d");
+        window.my_expired_bar2 = new Chart(expired_bar_Ctx2, expired_barConfig2);
+
     };
 
 </script>
 
 <script>
+    // len level count
     var barConfig0 = {
         type: 'bar',
         data: {
@@ -245,7 +260,7 @@
         }
     };
 
-    //
+    // len level mem used
     var barConfig1 = {
         type: 'bar',
         data: {
@@ -264,6 +279,17 @@
             labels: []
         },
         options: {
+            scales: {
+                y: {
+                        beginAtZero: true, // 设置 y 轴从 0 开始
+                        ticks: {
+                            display: true,
+                            callback: function(value) {
+                               return formatBytes(value); //纵坐标格式化显示
+                            }
+                        }
+                }
+            },
             tPercentage: 40,
             responsive: true,
             plugins: {
@@ -284,4 +310,93 @@
         }
     };
 
+ // Key过期剩余时间分析（内存）
+ var expired_barConfig1 = {
+        type: 'bar',
+        data: {
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    window.chartColors.yellow,
+                    window.chartColors.green,
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.blue,
+                ],
+            }],
+            labels: []
+        },
+        options: {
+            scales: {
+                y: {
+                        beginAtZero: true, // 设置 y 轴从 0 开始
+                        ticks: {
+                            display: true,
+                            callback: function(value) {
+                               return formatBytes(value); //纵坐标格式化显示
+                            }
+                        }
+                }
+            },
+            tPercentage: 40,
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false,
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                           return formatBytes(context.raw); // 使用格式化函数;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+ // Key过期剩余时间分析（数量）
+ var expired_barConfig2 = {
+        type: 'bar',
+        data: {
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    window.chartColors.yellow,
+                    window.chartColors.green,
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.blue,
+                ],
+            }],
+            labels: []
+        },
+        options: {
+            scales: {
+                y: {
+                        beginAtZero: true, // 设置 y 轴从 0 开始
+                }
+            },
+            tPercentage: 40,
+            responsive: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false,
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                           return formatNumber(context.raw); // 使用格式化函数;
+                        }
+                    }
+                }
+            }
+        }
+    };
 </script>

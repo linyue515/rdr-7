@@ -77,5 +77,10 @@ func rdbReveal(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		lenLevelCount[entry.Type] = append(lenLevelCount[entry.Type], entry)
 	}
 	data["LenLevelCount"] = lenLevelCount
+
+
+	data["ExpireStatBytes"] = counter.expireStatBytes
+	data["ExpireStatNum"] = counter.expireStatNum
+
 	ServeHTML(w, "base.html", "revel.html", data)
 }
