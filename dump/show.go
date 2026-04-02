@@ -112,11 +112,6 @@ func Show(c *cli.Context) {
 						}
 						counterConfig.Aux_Ctime=decoder.GetTimestamp()
 						counter := NewCounter(counterConfig)
-						// 在这里给key过期时间分析初始化，而不是在Counter创建对象时，原因是为了保存顺序
-						for _, t := range []string{"不过期", "已过期", "0~1h", "0~3h", "3~12h", "12~24h", "1~3d", "3~7d", ">7d"} {
-							counter.expireStatBytes[t] = 0
-							counter.expireStatNum[t] = 0
-						}
 						counter.Count(decoder.Entries)
 						counters.Set(filename, counter)
 						end_milliseconds := time.Now().UnixMilli()

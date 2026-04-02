@@ -256,5 +256,8 @@ func GetData(filename string, cnt *Counter, topN int, sizeFilter int64) map[stri
 	data["ExpireStatBytes"] = cnt.expireStatBytes
 	data["ExpireStatNum"] = cnt.expireStatNum
 
+	data["ByteLevelNum"] = cnt.byteLevelNum
+	data["ByteLevelBytes"] = cnt.byteLevelBytes
+
 	return data
 }

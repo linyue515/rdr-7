@@ -21,6 +21,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -48,6 +49,11 @@ func InitHTMLTmpl() {
 		}else{
 			return ""
 		}
+	}
+
+    tplFuncMap["calculatePercentage"] = func(part, total uint64) string {
+		f :=(float64(part) / float64(total)) * 100
+		return strconv.FormatFloat(f, 'f', 2, 64)
 	}
 
 	// init views html template

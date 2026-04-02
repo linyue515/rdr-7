@@ -81,6 +81,11 @@ func rdbReveal(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 
 	data["ExpireStatBytes"] = counter.expireStatBytes
 	data["ExpireStatNum"] = counter.expireStatNum
+	data["ExpireStatOrder"] = counter.expireStatOrder
+
+	data["ByteLevelNum"] = counter.byteLevelNum
+	data["ByteLevelBytes"] = counter.byteLevelBytes
+	data["ByteLevelOrder"] = counter.byteLevelOrder
 
 	ServeHTML(w, "base.html", "revel.html", data)
 }

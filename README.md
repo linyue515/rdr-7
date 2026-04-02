@@ -81,10 +81,11 @@ redis rdb版本：
     
    - v1.1.4
      - 优化key前缀统计的处理逻辑，增加动态缩容机制，防止创建海量的前缀对象因内存不足，导致分析不完【Heachy PR, 2026-03-17】
-	 - 优化后：在前缀数量限制下，一个10G的rdb文件，用时30秒。之前没限制、主机内存足够时，需要4分钟左右。 
+	 - 优化后：在前缀数量限制下，一个10G的rdb文件，用时30秒。以前没限制时，需要4分钟左右。 
 	 
    - v1.1.5
-     - 在线分析报告（command:show），支持Key过期剩余时间分析
+     - 在线分析报告（command:show），增加Key过期剩余时间分析、key数据大小区间分析
+	 - 修复已知问题，如按key元素个数据分析的前端赋值重复问题，通过带有函数的json对象深拷贝解决
 
 
 ## Usage（使用）
@@ -128,23 +129,24 @@ OPTIONS:
 # mkdir -p /tmp/rdb/
 # cd /tmp/rdb/
 
-3.然后把rdr工具、redis的数据库文件.rdb上传到该目录下
+3.使用redis的bgsave命令导出全量文件(rdb文件)
 
+4.然后把rdr工具、redis的数据库文件.rdb上传到该目录下
 给工具赋予执行权限
 # chmod a+x ./rdr*
 
-4.运行
+5.进行分析
 # GOGC=200 ./rdr-linux show -p 8099 *.rdb
 注意,如果你的rdb文件比较大（1G+）,建议一次只分析一个rdb文件
     如果rdb文件大，那么cpu使用率就会过高，此时我们调整GOGC，默认100，提高值(200-400)可降低GC频率，减少CPU占用但会增加峰值内存使用
 
-5.防火墙端口放行
+6.防火墙端口放行
      For Ubuntu\Debian：sudo ufw allow 8099/tcp  &&  sudo ufw reload
      For Redhat\Centos：
           sudo firewall-cmd --zone=public --add-port=8099/tcp --permanent
           sudo firewall-cmd --reload
 		   
-6.查看分析报告，浏览器访问 http://your-host:8099/
+7.查看分析报告，浏览器访问 http://your-host:8099/
 ```
 
 ### windows下使用说明
@@ -165,7 +167,7 @@ OPTIONS:
 $ GOGC=200 ./rdr-linux show -p 8099 dump.rdb
 # 从v1.1.3版本起：
   - 支持指定获取最大的 N 个键，最大500; 
-  - 支持指定内存大小过滤参数-s, 用于过滤掉小于该阈值的key，单位为B/KB/MB/GB
+  - 支持指定内存大小过滤参数-s，小于阈值的key被过滤掉，用于导出大于阈值的大 key，单位为B/KB/MB/GB
 $ GOGC=200 ./rdr-linux show -p 8099 -n 100 -s 10kb dump.rdb
 
 # 从v1.1.4版本起：
@@ -188,7 +190,7 @@ Note that the memory usage is approximate.
 $ GOGC=200 ./rdr-linux  dump2file  dump.rdb
 # 从v1.1.3版本起：
   - 支持指定获取最大的 N 个键，最大500; 
-  - 支持指定内存大小过滤参数-s, 用于过滤掉小于该阈值的key，单位为B/KB/MB/GB
+  - 支持指定内存大小过滤参数-s，小于阈值的key被过滤掉，用于导出大于阈值的大 key，单位为B/KB/MB/GB
 $ GOGC=200 ./rdr-linux  dump2file -n 100 -s 10kb  dump.rdb
 
 # 从v1.1.4版本起：
@@ -206,9 +208,9 @@ $ GOGC=200 ./rdr-linux dump2file pn 500 psn 5000 pmn 50000 dump.rdb
 ```
 3.解析出所有key及属性信息，输出到文件（当前目录/rdb-all-keys-xxx.txt），以便自行分析。
 $ GOGC=200 ./rdr-linux keys dump.rdb
-key,type,encoding,size,humanizeSize,numOfElem,expiration,lruIdle,lfuFreq,db
-student:1:name, string, string, 100, 100 B, 8, , , 0, 0
-colors, set, listpack, 94, 94 B, 2, , , 0, 0
+key,type,encoding,size,humanizeSize,numOfElem,expiration,expire_seconds,lruIdle,lfuFreq,db
+student:1:name, string, string, 100, 100 B, 8, , -1, 0, 0
+colors, set, listpack, 94, 94 B, 2, , -1, 0, 0
 
 附-mysql建表语句：
 CREATE TABLE rdb_keys_infor (
@@ -220,6 +222,7 @@ CREATE TABLE rdb_keys_infor (
     `humanizeSize` varchar(30) NOT NULL COMMENT '内存使用',
     `numOfElem` int NOT NULL COMMENT '元素数量',
     `expiration`  varchar(30)   COMMENT '过期时间',
+    `expire_seconds` int NOT NULL COMMENT '过期剩余时间，单位秒。-1表示永不过期，0表示已经过期',
     `lruIdle`  varchar(30)   COMMENT '最后一次方式时间',
     `lfuFreq` int NOT NULL COMMENT '访问频率',
     `db` int NOT NULL COMMENT 'db'
@@ -242,7 +245,7 @@ Q：如何处理报错decode rdbfile error: rdb: unknown object type 116 for key
 A：该报错表示实例中存在非标准或新版本增加的数据结构，暂不支持分析，你可以还原到测试实例删除后再进行分析。
 
 Q：为什么Redis缓存分析中String类型Key的元素数量和元素长度是一样的？
-A：在Redis缓存分析中，针对String类型的Key，其元素数量就是其元素长度。
+A：在Redis缓存分析中，针对String类型的Key，其元素数量就是其元素长度。集合类。
 
 Q：Redis缓存分析的前缀分隔符是什么？
 A：目前Redis缓存分析的前缀分隔符，默认为":;,_- "，V1.1.4起支持传递参数。
@@ -255,6 +258,13 @@ A: 从v1.0.9版本起，将所有所属的db都进行了显示，多个时以逗
 
 Q：Key过期时间是如何分析的？
 A: key的过期时间是时间戳，不是ttl，因此，只能是剩余时间分析。rdr 根据与 rdb 创建时间（AUX元属性之ctime）的差值，进行的分布分析。
+
+Q：什么是大 key?
+A：没有硬性规定的，通常字符串类型超过10KB，集合类的元素个数超过5000个，认为是Big key。有的公司约定单 key 体积不超1MB，集合类型二级的条目个数少于1千个性能最佳，最好不要超过1万个。
+
+Q：过期时间设置多少比较好？
+A: 缓存时间设置1小时内最好，最好不要超过24小时
+
 ```
 
 

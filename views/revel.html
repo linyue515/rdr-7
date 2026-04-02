@@ -32,7 +32,7 @@
         <section class="content-header">
             <div class="box">
                 <div class="box-body">
-                    <center><strong>len level count</strong></center><br>
+                    <center><strong>按key的元素个数分析</strong></center><br>
                     <div class="nav-tabs-custom">
                         <ul id="len-num-head" class="nav nav-tabs">
                             {{range $type, $entries := .LenLevelCount}}
@@ -57,7 +57,7 @@
         <section class="content-header">
             <div class="box">
                 <div class="box-body">
-                    <center><strong>len level mem used</strong></center><br>
+                    <center><strong> 按key的元素个数分析（内存）</strong></center><br>
                     <div class="nav-tabs-custom">
                         <ul id="len-mem-head" class="nav nav-tabs">
                             {{range $type, $entries := .LenLevelCount}}
@@ -79,34 +79,36 @@
         </section>
     </div>
 </div>
+
 <div class="row">
-    <!--key 过期剩余时间分析（内存） -->
+    <!--key 过期剩余时间分析（数量） -->
     <div class="col-md-6">
         <section class="content-header">
             <div class="box">
                 <div class="box-body">
-                    <center><strong>Key过期剩余时间分析（内存）</strong></center><br>
+                    <center><strong>Key过期时间分布（数量）</strong></center><br>
                     <div id="canvas-holder-3" style="width:100%;">
-                        <canvas id="chart-bar-expir-1" height="150"/>
+                        <canvas id="chart-bar-expir-1" width="400" height="200"/>
                     </div>
                 </div>
             </div>
         </section>
     </div>
 
-    <!--key 过期剩余时间分析（数量） -->
+    <!--key 过期剩余时间分析（内存） -->
     <div class="col-md-6">
         <section class="content-header">
             <div class="box">
                 <div class="box-body">
-                    <center><strong>Key过期剩余时间分析（数量）</strong></center><br>
+                    <center><strong>Key过期时间分布（内存）</strong></center><br>
                     <div id="canvas-holder-4" style="width:100%;">
-                        <canvas id="chart-bar-expir-2" height="150"/>
+                        <canvas id="chart-bar-expir-2" width="400" height="200"/>
                     </div>
                 </div>
             </div>
         </section>
     </div>
+
 </div>
 
 <div class="row">
@@ -147,12 +149,48 @@
         </section>
     </div>
 
-    <!-- Key前缀（按数量）分析 -->
     <div class="col-md-5">
-        <section class="content-header">
+        <!-- 按key的数据大小分析 -->
+        <div class="row">
+            <section class="content-header">
             <div class="box">
                 <div class="box-body">
-                    <center><strong>count by key prefix</strong></center><br>
+                    <center><strong>按key的数据大小分析</strong></center><br>
+                    <table class="table table-condensed table-hover sortable" style="word-break:break-all; word-wrap:break-all;">
+                        <thead>
+                            <tr style="background-color:#f1f1f1;" align="center">
+                                <td style="width:90px !important;"> Size Interval </td>
+                                <td> DataSize </td>
+                                <td> 占比 </td>
+                                <td> Count </td>
+                                <td> 占比 </td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{range $k := .ByteLevelOrder}}
+                            <tr>
+                                <td align="right">{{$k}}</td>
+                                <td align="right">{{humanizeBytes (index $.ByteLevelBytes $k)}}</td>
+                                <td align="center">{{calculatePercentage (index $.ByteLevelBytes $k) $.TotalBytes}}%</td>
+                                <td align="right">{{humanizeComma (index $.ByteLevelNum $k)}}</td>
+                                <td align="center">{{calculatePercentage (index $.ByteLevelNum $k)  $.TotalNum}}%</td>
+                            </tr>
+                            {{end}}
+                            <tr>
+                                <td colspan="5" style="font-size:10px;">注：如果小于1K的特别多，那么就要看看是哪些key个数特别多（因为有数据结构这层外壳的内存开销），详见大 key 规约。</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            </section>
+        </div>
+        <!-- Key前缀（按数量）分析 -->
+        <div class="row">
+            <section class="content-header">
+            <div class="box">
+                <div class="box-body">
+                    <center><strong>top key prefix</strong></center><br>
                     <div class="nav-tabs-custom">
                         <ul class="nav nav-tabs nav-justified">
                             {{range $type, $entries := .LargestKeyPrefixes}}
@@ -188,8 +226,10 @@
                     </div>
                 </div>
             </div>
-        </section>
+            </section>
+        </div>
     </div>
+
 </div>
     <!--
     <div class="col-md-12">

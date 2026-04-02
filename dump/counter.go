@@ -47,6 +47,24 @@ const (
     // rdb创建时间
 	DefaultAux_Ctime = 0
 
+	//按key的元素数量，进行区间分析，注意，要和NewCounter中的LengthLevel一致
+	LengthLevelStr    = "空"
+	LengthLevelStr0   = "0~100"
+	LengthLevelStr1   = "100~1k"
+	LengthLevelStr2   = "1k~5k"
+	LengthLevelStr3   = "5k~1w"
+	LengthLevelStr4   = "1w~10w"
+	LengthLevelStr5   = ">10w"
+
+    //按key的大小，进行区间分析
+	ByteLevelStr1k = "0~1k"
+	ByteLevelStr10k = "1k~10k"
+	ByteLevelStr100k = "10k~100k"
+	ByteLevelStr1M = "100k~1M"
+	ByteLevelStr10M = "1M~10M"
+	ByteLevelStr100M = "10M~100M"
+	ByteLevelStrAbove100M = ">100M"
+
 )
 // v1.1.4 add
 type CounterConfig struct {
@@ -97,9 +115,9 @@ func NewCounter(config *CounterConfig) *Counter {
 		largestKeyPrefixes: p,
 		lengthLevel0:       100,
 		lengthLevel1:       1000,
-		lengthLevel2:       10000,
-		lengthLevel3:       100000,
-		lengthLevel4:       1000000,
+		lengthLevel2:       5000,
+		lengthLevel3:       10000,
+		lengthLevel4:       100000,
 		lengthLevelBytes:   map[typeKey]uint64{},
 		lengthLevelNum:     map[typeKey]uint64{},
 		keyPrefixBytes:     map[typeKey]uint64{},
@@ -108,8 +126,15 @@ func NewCounter(config *CounterConfig) *Counter {
 		typeNum:            map[string]uint64{},
 		slotBytes:          map[int]uint64{},
 		slotNum:            map[int]uint64{},
-		expireStatBytes:    map[string]uint64{},
-		expireStatNum:      map[string]uint64{},
+		expireStatBytes:    map[string]uint64{ ExpireStat_0_Str:0, ExpireStat_1_Str:0, ExpireStat_0_1h_Str:0, ExpireStat_1_3h_Str:0, ExpireStat_3_12h_Str:0,
+												ExpireStat_12_24h_Str:0, ExpireStat_1_3d_Str:0, ExpireStat_3_7d_Str:0, ExpireStat_7d_Str:0},
+		expireStatNum:      map[string]uint64{ ExpireStat_0_Str:0, ExpireStat_1_Str:0, ExpireStat_0_1h_Str:0, ExpireStat_1_3h_Str:0, ExpireStat_3_12h_Str:0,
+												ExpireStat_12_24h_Str:0, ExpireStat_1_3d_Str:0, ExpireStat_3_7d_Str:0, ExpireStat_7d_Str:0},
+		expireStatOrder:    []string{ExpireStat_0_Str, ExpireStat_1_Str, ExpireStat_0_1h_Str, ExpireStat_1_3h_Str, ExpireStat_3_12h_Str,
+										ExpireStat_12_24h_Str, ExpireStat_1_3d_Str, ExpireStat_3_7d_Str, ExpireStat_7d_Str},  // 定义顺序
+		byteLevelNum:       map[string]uint64{ByteLevelStr1k:0, ByteLevelStr10k:0, ByteLevelStr100k:0, ByteLevelStr1M:0, ByteLevelStr10M:0, ByteLevelStr100M:0, ByteLevelStrAbove100M:0},
+		byteLevelBytes:     map[string]uint64{ByteLevelStr1k:0, ByteLevelStr10k:0, ByteLevelStr100k:0, ByteLevelStr1M:0, ByteLevelStr10M:0, ByteLevelStr100M:0, ByteLevelStrAbove100M:0},
+		byteLevelOrder:	    []string{ByteLevelStr1k, ByteLevelStr10k, ByteLevelStr100k, ByteLevelStr1M, ByteLevelStr10M, ByteLevelStr100M, ByteLevelStrAbove100M},
 		keyPrefixDb:        map[typeKey]string{},
 		config:             config,
 	}
@@ -134,6 +159,10 @@ type Counter struct {
 	slotNum            map[int]uint64
 	expireStatBytes    map[string]uint64
 	expireStatNum      map[string]uint64
+	expireStatOrder    []string  //因为map是无序集合，想要有序需要自己实现，这里定义顺序
+	byteLevelNum       map[string]uint64
+	byteLevelBytes     map[string]uint64
+	byteLevelOrder     []string
 	keyPrefixDb        map[typeKey]string
 	config             *CounterConfig
 }
@@ -156,6 +185,7 @@ func (c *Counter) count(e *decoder.Entry) {
 	c.countBySlot(e)
 	//c.countByDb(e) //该方法由caiqing0204添加
 	c.countByExpire(e)
+	c.countByByte(e)
 
 }
 
@@ -230,7 +260,7 @@ func (c *Counter) countLargestEntries(e *decoder.Entry, num int) {
 }
 
 func (c *Counter) countByLength(e *decoder.Entry) {
-	key := typeKey{
+	lengthLevelKey := typeKey{
 		Type: e.Type,
 		Key:  strconv.FormatUint(c.lengthLevel0, 10),
 	}
@@ -240,23 +270,27 @@ func (c *Counter) countByLength(e *decoder.Entry) {
 		c.lengthLevelNum[key]++
 	}
 
-	// must lengthLevel4 > lengthLevel3 > lengthLevel2 ...
-	if e.NumOfElem > c.lengthLevel4 {
-		key.Key = strconv.FormatUint(c.lengthLevel4, 10)
-		add(c, key, e)
-	} else if e.NumOfElem > c.lengthLevel3 {
-		key.Key = strconv.FormatUint(c.lengthLevel3, 10)
-		add(c, key, e)
-	} else if e.NumOfElem > c.lengthLevel2 {
-		key.Key = strconv.FormatUint(c.lengthLevel2, 10)
-		add(c, key, e)
-	} else if e.NumOfElem > c.lengthLevel1 {
-		key.Key = strconv.FormatUint(c.lengthLevel1, 10)
-		add(c, key, e)
-	} else if e.NumOfElem > c.lengthLevel0 {
-		key.Key = strconv.FormatUint(c.lengthLevel0, 10)
-		add(c, key, e)
+	numOfKey := e.NumOfElem
+    lengthLevelStr := LengthLevelStr
+	switch  {
+	case numOfKey == 0:
+		lengthLevelStr = LengthLevelStr
+	case numOfKey > 0 && numOfKey <= c.lengthLevel0:
+		lengthLevelStr = LengthLevelStr0
+	case numOfKey > c.lengthLevel0 && numOfKey <= c.lengthLevel1:
+		lengthLevelStr = LengthLevelStr1
+	case numOfKey > c.lengthLevel1 && numOfKey <= c.lengthLevel2:
+		lengthLevelStr = LengthLevelStr2
+	case numOfKey > c.lengthLevel2 && numOfKey <= c.lengthLevel3:
+		lengthLevelStr = LengthLevelStr3
+	case numOfKey > c.lengthLevel3 && numOfKey <= c.lengthLevel4:
+		lengthLevelStr = LengthLevelStr4
+	case numOfKey > c.lengthLevel4:
+		lengthLevelStr = LengthLevelStr5
 	}
+	lengthLevelKey.Key = lengthLevelStr
+	add(c, lengthLevelKey, e)
+
 }
 
 func (c *Counter) countByType(e *decoder.Entry) {
@@ -266,7 +300,6 @@ func (c *Counter) countByType(e *decoder.Entry) {
 
 // 过期剩余时间分析，v1.1.5 add
 func (c *Counter) countByExpire(e *decoder.Entry) {
-
     if e.Expiration >0 {
 		// rdb的创建时间，是秒间戳，key的过期时间是毫秒时间戳
 		// 转换成时间对象后，计算两个时间的差值
@@ -299,6 +332,31 @@ func (c *Counter) countByExpire(e *decoder.Entry) {
 		c.expireStatBytes[ExpireStat_0_Str] += e.Bytes
 	}
 }
+
+// 按key的大小，进行区间分析，v1.1.5 add
+func (c *Counter) countByByte(e *decoder.Entry) {
+	bytesOfKey := e.Bytes
+    tmp_byteLevelStr := ByteLevelStr1k
+	switch  {
+	case bytesOfKey > 0 && bytesOfKey <= 1024:
+		tmp_byteLevelStr = ByteLevelStr1k
+	case bytesOfKey > 1024 && bytesOfKey <= 10240:
+		tmp_byteLevelStr = ByteLevelStr10k
+	case bytesOfKey > 10240 && bytesOfKey <= 102400:
+		tmp_byteLevelStr = ByteLevelStr100k
+	case bytesOfKey > 102400 && bytesOfKey <= (1024*1024):
+		tmp_byteLevelStr = ByteLevelStr1M
+	case bytesOfKey > (1024*1024) && bytesOfKey <= (1024*1024*10):
+		tmp_byteLevelStr = ByteLevelStr10M
+	case bytesOfKey > (1024*1024*10) && bytesOfKey <= (1024*1024*100):
+		tmp_byteLevelStr = ByteLevelStr100M
+	case bytesOfKey > (1024*1024*100):
+		tmp_byteLevelStr = ByteLevelStrAbove100M
+	}
+	c.byteLevelNum[tmp_byteLevelStr]++
+	c.byteLevelBytes[tmp_byteLevelStr] += e.Bytes
+}
+
 // 传入一个entry，根据key名，通过分隔符得到前缀，然后对各前缀进行计数
 func (c *Counter) countByKeyPrefix(e *decoder.Entry) {
 

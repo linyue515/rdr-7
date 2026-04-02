@@ -149,12 +149,45 @@
         }
     };
 
+    /**
+    * 用途：深拷贝带有函数的对象
+    * 实现：在自定义序列化时，将函数转换为字符串并添加特殊标识包裹上，在反序列化时还原为函数
+    */
+    const prefix = '[[fn:';
+    const suffix = ':fn]]';
+
+    /**
+    * 序列化时过滤处理.
+    */
+    function toJsonStr(obj, space) {
+        return JSON.stringify(obj, (key, value) => {
+            if (typeof value === 'function') {
+                return prefix + value.toString() + suffix;
+            } else if (typeof value === "undefined") {
+                // 直接将undefined值的属性变成null值。
+                return null;
+            }
+            return value;
+        }, space);
+    }
+    /**
+    * 反序列化（解析）过滤处理
+    */
+    function parseJson(jsonStr) {
+        return JSON.parse(jsonStr, (key, value) => {
+            if (typeof value === 'string' && value.startsWith(prefix) && value.endsWith(suffix)) {
+                const fnStr = value.slice(prefix.length, -suffix.length);
+                return new Function('return ' + fnStr)();
+            }
+            return value;
+        });
+    }
 
     window.onload = function() {
 
         //key数量和内存的饼图，本文件是生产图表，前端页面在revel.html
-        //如何josn对象直接赋给另一个变量，返回的是同一个对象（自然取出的数据也是相同的），解决办法是先转字符串
-        //注：用这种方式，导致数据提示不能格式化，因此定义了各自的配置变量
+        //如果josn对象直接赋给另一个变量，返回的是同一个对象（自然取出的数据也是相同的），解决办法是先转字符串
+        //注：JSON.stringify() 不会序列化对象的函数或者原型链上的属性。这意味着如果对象中包含函数或者需要通过原型链访问的属性，这些属性不会被包含在生成的 JSON 字符串中。
         //var rawPieConfig = JSON.stringify(pieConfig);
         //var pieConfig0 = JSON.parse(rawPieConfig);
         //var pieConfig1 = JSON.parse(rawPieConfig);
@@ -180,42 +213,45 @@
         //以下是len lver的柱状图
         var count = {};
         {{range $type, $entries := .LenLevelCount}}
-        var entries = [];
-        {{range $entry := $entries}}
-        entries.push({
-            label: {{$entry.Key}},
-            bytes: {{$entry.Bytes}},
-            num: {{$entry.Num}}
-        });
-        {{end}}
-        count[{{$type}}] = entries;
+            var entries = [];
+            {{range $entry := $entries}}
+                entries.push({
+                    label: {{$entry.Key}},
+                    bytes: {{$entry.Bytes}},
+                    num: {{$entry.Num}}
+                });
+            {{end}}
+            count[{{$type}}] = entries;
         {{end}}
 
         for (typ in count) {
             var entries = count[typ];
-            //var rawBarConfig = JSON.stringify(barConfig);
-            //var barConfig0 = JSON.parse(rawBarConfig);
-            //var barConfig1 = JSON.parse(rawBarConfig);
+            // var rawbarConfig = JSON.stringify(barConfig);
+            // var barConfig0 = JSON.parse(rawbarConfig);
+            // var barConfig1 = JSON.parse(rawbarConfig);
+
+            const copyBarConfig0 = parseJson(toJsonStr(barConfig0));
+            const copyBarConfig1 = parseJson(toJsonStr(barConfig1));
 
             for (i in entries) {
                 var entry = entries[i];
-                barConfig0.data.datasets[0].data.push(entry.num);
-                barConfig1.data.datasets[0].data.push(entry.bytes);
-                barConfig0.data.labels.push(">" + entry.label);
-                barConfig1.data.labels.push(">" + entry.label);
+                copyBarConfig0.data.datasets[0].data.push(entry.num);
+                copyBarConfig1.data.datasets[0].data.push(entry.bytes);
+                copyBarConfig0.data.labels.push(entry.label);
+                copyBarConfig1.data.labels.push(entry.label);
             }
             var barCtx0 = document.getElementById("bar0-aera-" + typ).getContext("2d");
-            window["myBar0" + typ] = new Chart(barCtx0, barConfig0);
+            window["myBar0" + typ] = new Chart(barCtx0, copyBarConfig0);
             var barCtx1 = document.getElementById("bar1-aera-" + typ).getContext("2d");
-            window["myBra1" + typ] = new Chart(barCtx1, barConfig1);
+            window["myBra1" + typ] = new Chart(barCtx1, copyBarConfig1);
         }
 
         //以下是key过期时间的柱状图
-        {{range $k, $v := .ExpireStatNum}}
-            expired_barConfig2.data.datasets[0].data.push({{$v}});
-            expired_barConfig1.data.datasets[0].data.push({{index $.ExpireStatBytes $k}});
-            expired_barConfig2.data.labels.push({{$k}});
+        {{range $k := .ExpireStatOrder}}
+            expired_barConfig1.data.datasets[0].data.push({{index $.ExpireStatNum $k}});
+            expired_barConfig2.data.datasets[0].data.push({{index $.ExpireStatBytes $k}});
             expired_barConfig1.data.labels.push({{$k}});
+            expired_barConfig2.data.labels.push({{$k}});
         {{end}}
 
         var expired_bar_Ctx1 = document.getElementById("chart-bar-expir-1").getContext("2d");
@@ -228,7 +264,7 @@
 </script>
 
 <script>
-    // len level count
+    // key元素个数分布 len level count
     var barConfig0 = {
         type: 'bar',
         data: {
@@ -256,6 +292,13 @@
                 title: {
                     display: false,
                 },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return "有 " + context.raw + " 个key";
+                        }
+                    }
+                }
             }
         }
     };
@@ -310,8 +353,49 @@
         }
     };
 
- // Key过期剩余时间分析（内存）
- var expired_barConfig1 = {
+    // Key过期剩余时间分析（数量）
+    var expired_barConfig1 = {
+        type: 'bar',
+        data: {
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    window.chartColors.yellow,
+                    window.chartColors.green,
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.blue,
+                ],
+            }],
+            labels: []
+        },
+        options: {
+            aspectRatio: 3, //控制高度与宽度的比例
+            scales: {
+                y: {
+                        beginAtZero: true, // 设置 y 轴从 0 开始
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false,
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                           return "有 " + formatNumber(context.raw) + " 个key"; // 使用格式化函数;
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+     // Key过期剩余时间分析（内存）
+    var expired_barConfig2 = {
         type: 'bar',
         data: {
             datasets: [{
@@ -339,8 +423,6 @@
                         }
                 }
             },
-            tPercentage: 40,
-            responsive: true,
             plugins: {
                 legend: {
                     display: false
@@ -359,46 +441,5 @@
         }
     };
 
- // Key过期剩余时间分析（数量）
- var expired_barConfig2 = {
-        type: 'bar',
-        data: {
-            datasets: [{
-                data: [],
-                backgroundColor: [
-                    window.chartColors.yellow,
-                    window.chartColors.green,
-                    window.chartColors.red,
-                    window.chartColors.orange,
-                    window.chartColors.blue,
-                ],
-            }],
-            labels: []
-        },
-        options: {
-            aspectRatio: 3, //控制高度与宽度的比例
-            scales: {
-                y: {
-                        beginAtZero: true, // 设置 y 轴从 0 开始
-                }
-            },
-            tPercentage: 40,
-            responsive: true,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: false,
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                           return formatNumber(context.raw); // 使用格式化函数;
-                        }
-                    }
-                }
-            }
-        }
-    };
+
 </script>
